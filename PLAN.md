@@ -240,16 +240,18 @@ Do **not** wait for curtailment data to ship Phases 1–3. Those alone change ho
 
 ---
 
-## Working loop (laptop ↔ media box ↔ phone)
+## Working loop (media box ↔ phone)
 
-1. Implement on whichever Cursor agent has the repo.
-2. `git push` to `qasrnexe/basin34-water-transparency` (`main`).
-3. On media box: `~/projects/tv-remote/homelab/scripts/deploy-water.sh`  
-   (or tell the **media-box** agent: “deploy water”).
-4. Check https://water.bnm.farm/ and mark checkboxes in this file.
+**Canonical home:** media box `~/projects/basin34-water-transparency`  
+**GitHub:** `qasrnexe/basin34-water-transparency` (media-box SSH user key)  
+**Live:** https://water.bnm.farm  
 
-**Phone tip:** You don’t need `/plan`. Open this repo (or `tv-remote`) on My Machines → media-box (or laptop) and say:  
-“Read `PLAN.md` and implement Phase N.”
+1. Talk to the **media-box** Cursor agent (phone is fine).
+2. Agent implements, commits, `git push origin main`.
+3. Agent deploys: `~/projects/tv-remote/homelab/scripts/deploy-water.sh`
+4. You check https://water.bnm.farm/ — no laptop required.
+
+**Phone tip:** “Read `PLAN.md` and implement Phase N.”
 
 ---
 
