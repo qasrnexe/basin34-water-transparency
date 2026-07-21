@@ -29,7 +29,8 @@ A **public accountability / transparency tool** for Water District 34 (Big Lost 
 - [x] Phase 1: satellite default, Story/Explore shell, presets, data-as-of
 - [x] **A+B:** staged first load + dry-reach seniors table/CSV
 - [x] **C:** guided Story steps (7 geography-only steps)
-- [ ] Mobile polish (D)
+- [x] **D:** mobile bottom-sheet + tap targets
+- [ ] Later: curtailment / live USGS / fresher ETL (E)
 
 ---
 
@@ -39,8 +40,8 @@ A **public accountability / transparency tool** for Water District 34 (Big Lost 
 A. Performance (staged load + loading UI)     ← DONE
 B. Accountability outputs (dry-reach list + CSV) ← DONE
 C. Guided Story steps (short, geography-only) ← DONE
-D. Mobile polish                              ← NEXT
-E. Later: WD34 curtailment/accounting join
+D. Mobile polish                              ← DONE
+E. Later: WD34 curtailment/accounting join    ← NEXT when ready
 ```
 
 Do **not** add more Explore chrome until A+B feel usable (they should now).
@@ -106,9 +107,16 @@ No private surnames in captions or presets.
 
 ---
 
-### D — Mobile polish ← NEXT
+### D — Mobile polish ← DONE
 
 Bottom-sheet story, tap targets, chart lightbox on small screens.
+
+**Done when**
+
+- [x] Map-first layout with collapsible bottom sheet (Story peek / Explore expand)
+- [x] Larger tap targets; modal near-fullscreen; charts scale to viewport
+- [x] Leaflet controls / timeline clear the sheet; map invalidates on sheet toggle
+- [x] Deployed
 
 ---
 

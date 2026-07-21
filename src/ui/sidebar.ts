@@ -22,6 +22,8 @@ export interface SidebarCallbacks {
   showDryReach?: () => void
   /** Permalink / persistence hook when UI mode changes. */
   onUiMode?: (mode: UiMode) => void
+  /** Mobile bottom-sheet expanded/collapsed (map should invalidateSize). */
+  onSheetChange?: () => void
   /** Owner highlight (story presets). */
   setOwnerHighlight?: (owner: string | null) => void
   /** Zoom map to lower basin / Arco area. */
@@ -51,6 +53,48 @@ export function applyUiMode(mode: UiMode) {
   })
   localStorage.setItem(MODE_KEY, mode)
   document.body.dataset.uiMode = mode
+  // Explore needs room for controls; Story can stay collapsed on phones.
+  if (mode === 'explore' && isMobileSheet()) setSheetExpanded(true)
+}
+
+function isMobileSheet(): boolean {
+  return window.matchMedia('(max-width: 768px)').matches
+}
+
+export function setSheetExpanded(expanded: boolean) {
+  document.body.classList.toggle('sheet-expanded', expanded)
+  document.body.classList.toggle('sheet-collapsed', !expanded)
+  const handle = $('sheet-handle')
+  if (handle) {
+    handle.setAttribute('aria-expanded', expanded ? 'true' : 'false')
+    const label = handle.querySelector('.sheet-handle-label')
+    if (label) label.textContent = expanded ? 'Hide panel' : 'Story & tools'
+  }
+}
+
+function wireMobileSheet(cb: SidebarCallbacks) {
+  // Default: collapsed peek so the map dominates on phones.
+  if (isMobileSheet()) {
+    setSheetExpanded(document.body.dataset.uiMode === 'explore')
+  } else {
+    document.body.classList.remove('sheet-expanded', 'sheet-collapsed')
+  }
+
+  $('sheet-handle')?.addEventListener('click', () => {
+    if (!isMobileSheet()) return
+    const next = !document.body.classList.contains('sheet-expanded')
+    setSheetExpanded(next)
+    cb.onSheetChange?.()
+  })
+
+  window.matchMedia('(max-width: 768px)').addEventListener('change', e => {
+    if (e.matches) {
+      setSheetExpanded(document.body.dataset.uiMode === 'explore')
+    } else {
+      document.body.classList.remove('sheet-expanded', 'sheet-collapsed')
+    }
+    cb.onSheetChange?.()
+  })
 }
 
 export function populateReachSelect(store: DataStore) {
@@ -124,6 +168,7 @@ export function wireSidebar(cb: SidebarCallbacks) {
   const initialMode = getStoredUiMode()
   applyUiMode(initialMode)
   cb.onUiMode?.(initialMode)
+  wireMobileSheet(cb)
 
   document.querySelectorAll<HTMLButtonElement>('.mode-btn').forEach(btn => {
     btn.addEventListener('click', () => {

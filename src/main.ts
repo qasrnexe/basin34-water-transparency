@@ -254,6 +254,10 @@ async function bootstrap() {
     },
     onUiMode: mode => {
       if (mode === 'explore') void staticLayers.loadHeavy()
+      requestAnimationFrame(() => map.invalidateSize())
+    },
+    onSheetChange: () => {
+      requestAnimationFrame(() => map.invalidateSize())
     },
     showAppropriation: () => showAppropriationPanel(store),
     showRiverShrink: () => showReachLossPanel(),
@@ -341,6 +345,7 @@ async function bootstrap() {
   refreshData()
   setLoadStatus('Map ready — loading fields in background…', 70)
   hideLoadOverlay()
+  requestAnimationFrame(() => map.invalidateSize())
 
   // Restore guided story step from the share link (after layers exist)
   if (restored.storyStep != null) {

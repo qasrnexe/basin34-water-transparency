@@ -20,6 +20,10 @@ export function renderShell() {
 
     <main>
       <aside id="sidebar">
+        <button type="button" id="sheet-handle" class="sheet-handle" aria-expanded="false" aria-controls="sidebar" title="Expand or collapse panel">
+          <span class="sheet-handle-bar" aria-hidden="true"></span>
+          <span class="sheet-handle-label">Story &amp; tools</span>
+        </button>
         <section id="story-panel" class="mode-panel">
           <div class="story-card">
             <p class="story-kicker" id="story-kicker">Step 1 · Basin</p>

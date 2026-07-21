@@ -14,7 +14,9 @@ import {
 } from '../dryReach'
 
 /** Width for charts rendered inside the lightbox modal. */
-const MODAL_CHART_W = 640
+function modalChartW(): number {
+  return Math.min(640, Math.max(280, window.innerWidth - 48))
+}
 
 /** Main-stem gages used in the Mackay → Moore → Arco step-down story (USGS NWIS coords). */
 export const FLOW_STEP_GAGES = {
@@ -270,7 +272,7 @@ function renderGageChart(
       : []
 
   html += svgChart({
-    width: MODAL_CHART_W,
+    width: modalChartW(),
     height: 280,
     series: chartSeries,
     refLines,
@@ -438,7 +440,7 @@ export async function showAppropriationPanel(store: DataStore) {
   html += `<div style="font-size:0.85em;margin-bottom:4px">Cumulative <strong>authorized</strong> maximum diversion rate of all ${rights.length.toLocaleString()} dated Basin 34 rights, by priority year — currently <strong>${Math.round(tot).toLocaleString()} cfs</strong> (${Math.round(surf).toLocaleString()} surface + ${Math.round(gw).toLocaleString()} groundwater).</div>`
   html += `<div id="appropriation-chart">`
   html += svgChart({
-    width: MODAL_CHART_W,
+    width: modalChartW(),
     height: 240,
     series: [
       { points: cumAll, color: '#64748b', label: 'all rights (cumulative cfs)', kind: 'step', width: 2 },
@@ -464,7 +466,7 @@ export async function showAppropriationPanel(store: DataStore) {
       `total authorized rights (${Math.round(tot).toLocaleString()} cfs) vs the long-term mean flow at Arco ` +
       `(${meanFlow.toFixed(0)} cfs, ${flow[0].year}–${flow[flow.length - 1].year}).</div>` +
       svgChart({
-        width: MODAL_CHART_W,
+        width: modalChartW(),
         height: 170,
         series: [{
           points: flow.map(d => ({ x: d.year, y: d.cfs })),
@@ -587,7 +589,7 @@ export async function showReachLossPanel() {
       `(${lateArcoZeros} of those ${n} years had zero at Arco).</div>` +
       mooreTableHtml +
       svgChart({
-        width: MODAL_CHART_W,
+        width: modalChartW(),
         height: 300,
         series: [
           ...seriesFromPointsWithGaps(
@@ -607,7 +609,7 @@ export async function showReachLossPanel() {
         yLabel: 'calendar-year mean cfs',
       }) +
       svgChart({
-        width: MODAL_CHART_W,
+        width: modalChartW(),
         height: 200,
         series: pctSeries,
         yLabel: '% of Mackay flow',
@@ -615,7 +617,7 @@ export async function showReachLossPanel() {
       }) +
       (mooreYears.length >= 2
         ? svgChart({
-            width: MODAL_CHART_W,
+            width: modalChartW(),
             height: 160,
             series: [
               {
@@ -638,7 +640,7 @@ export async function showReachLossPanel() {
           })
         : '') +
       svgChart({
-        width: MODAL_CHART_W,
+        width: modalChartW(),
         height: 160,
         series: seriesFromPointsWithGaps(
           mackayArco.map(d => ({ x: d.year, y: Math.max(0, d.mackay - d.arco!) })),
@@ -687,7 +689,7 @@ export async function showConjunctivePanel(store: DataStore) {
     `<strong>${post1950Wells.toLocaleString()} irrigation wells</strong> were added in Basin 34 — ` +
     `shown in violet on the map, above the senior (pre-1950) surface rights downstream in yellow.</div>`
   html += svgChart({
-    width: MODAL_CHART_W,
+    width: modalChartW(),
     height: 210,
     series: [
       { points: cumGwCfs, color: '#7c3aed', label: 'cumulative GW authorized cfs', kind: 'step', width: 2 },
@@ -714,7 +716,7 @@ export async function showConjunctivePanel(store: DataStore) {
       `<strong style="color:${pct < 0 ? '#dc2626' : '#16a34a'}">${pct < 0 ? '▼' : '▲'} ${Math.abs(pct).toFixed(0)}%</strong> ` +
       `recent ${n}-yr mean (${recent.toFixed(0)} cfs) vs first ${n} yrs of record (${early.toFixed(0)} cfs).</div>` +
       svgChart({
-        width: MODAL_CHART_W,
+        width: modalChartW(),
         height: 170,
         series: [{
           points: flow.map(d => ({ x: d.year, y: d.cfs })),

@@ -249,15 +249,6 @@ header .subtitle {
   font-weight: 600;
 }
 
-@media (max-width: 720px) {
-  header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-  .header-actions { width: 100%; }
-}
-
 /* Main layout */
 main {
   flex: 1;
@@ -587,6 +578,10 @@ main {
   color: #fff;
 }
 
+.sheet-handle {
+  display: none;
+}
+
 /* Details panel */
 #details {
   width: 320px;
@@ -603,24 +598,213 @@ main {
   display: block;
 }
 
-/* Mobile: stack / drawer behavior (basic) */
+/* Mobile: map-first + bottom sheet for Story/Explore */
 @media (max-width: 768px) {
-  #sidebar {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    max-height: 40vh;
+  :root {
+    --sheet-peek: 11.5rem;
+    --header-h: auto;
   }
-  #details {
+
+  html, body, #app {
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  header {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.6rem;
+    padding: 0.4rem 0.65rem;
+  }
+  header h1 { font-size: 0.95rem; }
+  header .subtitle { display: none; }
+  .data-as-of { display: none; }
+  .header-actions {
+    width: auto;
+    margin-left: auto;
+    gap: 0.35rem;
+  }
+  .header-btn,
+  .mode-btn {
+    min-height: 36px;
+    padding: 0.4rem 0.65rem;
+    font-size: 0.72rem;
+  }
+
+  main {
+    flex: 1;
+    min-height: 0;
+    display: block;
+    position: relative;
+  }
+
+  #map-wrap {
     position: absolute;
-    bottom: 0;
+    inset: 0;
+    min-height: 0;
+    /* Keep map chrome above the collapsed sheet */
+    padding-bottom: var(--sheet-peek);
+  }
+
+  body.sheet-expanded #map-wrap {
+    padding-bottom: min(72vh, 560px);
+  }
+
+  .leaflet-bottom {
+    bottom: calc(var(--sheet-peek) + 6px) !important;
+  }
+  body.sheet-expanded .leaflet-bottom {
+    bottom: calc(min(72vh, 560px) + 6px) !important;
+  }
+
+  #selection-banner {
+    top: 8px;
+    max-width: calc(100% - 24px);
+    font-size: 0.7rem;
+    white-space: normal;
+  }
+
+  #timeline-bar {
+    bottom: calc(var(--sheet-peek) + 8px);
+    width: calc(100% - 16px);
+  }
+  body.sheet-expanded #timeline-bar {
+    bottom: calc(min(72vh, 560px) + 8px);
+  }
+
+  .sheet-handle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    width: 100%;
+    padding: 0.45rem 0.5rem 0.35rem;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    min-height: 44px;
+  }
+  .sheet-handle-bar {
+    width: 40px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--border-strong);
+  }
+  .sheet-handle-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  #sidebar {
+    position: fixed;
     left: 0;
     right: 0;
+    bottom: 0;
+    z-index: 1200;
     width: 100%;
-    max-height: 45vh;
+    max-height: var(--sheet-peek);
+    border-right: none;
+    border-top: 1px solid var(--border);
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 -8px 28px rgba(15, 23, 42, 0.18);
+    padding: 0 0.75rem 0.75rem;
+    overflow: hidden;
+    transition: max-height 0.22s ease;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body.sheet-expanded #sidebar {
+    max-height: min(72vh, 560px);
+    overflow-y: auto;
+  }
+
+  /* Collapsed: keep the story card + nav; tuck the rest away */
+  body.sheet-collapsed #sidebar #story-panel > h2,
+  body.sheet-collapsed #sidebar #story-panel .preset-grid,
+  body.sheet-collapsed #sidebar #story-panel #basemap-switcher-story,
+  body.sheet-collapsed #sidebar #story-panel #open-explore-btn,
+  body.sheet-collapsed #sidebar #story-panel .story-restart,
+  body.sheet-collapsed #sidebar #explore-panel {
+    display: none !important;
+  }
+
+  body.sheet-collapsed #sidebar .story-body {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .story-nav-btn,
+  .preset-btn,
+  .basemap-btn,
+  #open-explore-btn,
+  #dry-reach-btn,
+  #appropriation-btn,
+  #river-shrink-btn,
+  #timeline-btn,
+  #reset-all {
+    min-height: 40px;
+  }
+
+  .story-dot {
+    width: 12px;
+    height: 12px;
+  }
+
+  #details {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: min(55vh, 420px);
     border-left: none;
     border-top: 1px solid var(--border);
-    z-index: 50;
+    border-radius: 14px 14px 0 0;
+    z-index: 1300;
+    box-shadow: 0 -8px 28px rgba(15, 23, 42, 0.22);
+  }
+
+  #details.open {
+    display: block;
+  }
+
+  #close-details {
+    min-height: 36px;
+    min-width: 64px;
+  }
+
+  .zoom-btn {
+    min-height: 36px;
+    padding: 6px 12px;
+  }
+
+  #modal-backdrop {
+    padding: 0;
+    align-items: stretch;
+  }
+  #modal {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    padding: 12px 14px 20px;
+  }
+  #modal-close {
+    min-height: 40px;
+    min-width: 40px;
+    font-size: 1rem;
+  }
+
+  .disclaimer {
+    display: none;
   }
 }
 
