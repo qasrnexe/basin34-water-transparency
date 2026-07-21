@@ -88,6 +88,9 @@ Build a **public transparency tool** that is a **delight to use on first visit**
 
 ### Phase 1 — Quick wins (high impact / low risk)
 
+> **Status: largely shipped 2026-07-21** (satellite default, Story/Explore, presets, data-as-of, About). Full guided steps = Phase 2.
+
+
 **Goals:** First impression stops being “dense GIS tool.”
 
 1. **Default basemap → satellite** (and Hybrid optional). Update `main.ts` / permalink defaults.
@@ -102,10 +105,10 @@ Build a **public transparency tool** that is a **delight to use on first visit**
 
 **Done when**
 
-- [ ] Cold load on phone shows satellite + Story chrome (not full sidebar)
-- [ ] Explore still exposes prior filters/layers
-- [ ] Share link restores mode + basemap
-- [ ] Deployed to `water.bnm.farm`
+- [x] Cold load on phone shows satellite + Story chrome (not full sidebar)
+- [x] Explore still exposes prior filters/layers
+- [x] Share link restores basemap (mode via localStorage); story steps still Phase 2
+- [x] Deployed to `water.bnm.farm`
 
 ---
 

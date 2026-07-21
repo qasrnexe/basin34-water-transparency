@@ -44,7 +44,7 @@ export function encodeHash(basemap: Basemap, map: L.Map): string {
   for (const [key, b] of Object.entries(BOOLS)) {
     if (b.get() !== b.def) p.set(key, b.get() ? '1' : '0')
   }
-  if (basemap !== 'osm') p.set('b', basemap)
+  if (basemap !== 'satellite') p.set('b', basemap)
   const c = map.getCenter()
   p.set('v', `${map.getZoom()}/${c.lat.toFixed(4)}/${c.lng.toFixed(4)}`)
 

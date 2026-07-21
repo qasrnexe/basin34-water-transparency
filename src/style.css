@@ -89,6 +89,118 @@ header .subtitle {
   color: var(--text-muted);
 }
 
+.data-as-of {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.header-btn {
+  font-size: 0.75rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+.header-btn:hover { background: var(--border); }
+
+.mode-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  overflow: hidden;
+}
+.mode-btn {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.mode-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.mode-panel.hidden { display: none !important; }
+
+.story-card {
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+.story-kicker {
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-dark);
+  margin: 0 0 0.35rem;
+}
+.story-title {
+  font-size: 0.95rem !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  color: var(--text) !important;
+  margin: 0 0 0.5rem !important;
+  font-weight: 700 !important;
+  line-height: 1.25;
+}
+.story-body {
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--text);
+  margin: 0 0 0.5rem;
+}
+.story-muted { color: var(--text-muted); margin-bottom: 0; }
+
+.preset-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+.preset-btn {
+  font-size: 0.7rem;
+  line-height: 1.25;
+  text-align: left;
+  padding: 0.45rem 0.5rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--border-strong);
+  background: var(--control-bg);
+  color: var(--text);
+  cursor: pointer;
+}
+.preset-btn:hover { border-color: var(--accent); }
+.preset-btn.active,
+.era-btn.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 15%, var(--panel));
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .header-actions { width: 100%; }
+}
+
 /* Main layout */
 main {
   flex: 1;

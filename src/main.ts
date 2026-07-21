@@ -15,7 +15,7 @@ import { PouLayer } from './map/pouLayer'
 import { DiversionLayer } from './map/diversionLayer'
 import { loadStaticLayers, type StaticLayers } from './map/staticLayers'
 import { renderShell } from './ui/shell'
-import { wireSidebar, populateReachSelect, syncSidebarToState, syncReachSelect } from './ui/sidebar'
+import { wireSidebar, populateReachSelect, syncSidebarToState, syncReachSelect, loadDataAsOf } from './ui/sidebar'
 import { updateLegend } from './ui/legend'
 import { setupTimeline, type TimelineControl } from './ui/timeline'
 import { setupOwnerSearch, clearOwnerSearchUI } from './ui/ownerSearch'
@@ -47,7 +47,7 @@ let diversionLayer: DiversionLayer
 let staticLayers: StaticLayers
 let basemap: BasemapControl
 let timeline: TimelineControl
-let currentBasemap: Basemap = 'osm'
+let currentBasemap: Basemap = 'satellite'
 
 function updatePermalink() {
   if (map) schedulePermalinkUpdate(() => currentBasemap, map)
@@ -162,9 +162,10 @@ function zoomToGage(site: string) {
 
 async function bootstrap() {
   renderShell()
+  void loadDataAsOf()
   map = createMap()
   basemap = new BasemapControl(map)
-  basemap.set('osm')
+  basemap.set('satellite')
 
   store = await loadDataStore()
 
@@ -226,6 +227,11 @@ async function bootstrap() {
     },
     showAppropriation: () => showAppropriationPanel(store),
     showRiverShrink: () => showReachLossPanel(),
+    setOwnerHighlight: owner => {
+      state.ownerHighlight = owner
+      state.selectedWRs = new Set()
+      refreshData()
+    },
     resetAll: () => {
       if (timeline.isOpen()) timeline.close()
       resetState()
