@@ -41,7 +41,7 @@ export function renderShell() {
             <button type="button" class="preset-btn" data-preset="senior">Senior downstream</button>
             <button type="button" class="preset-btn" data-preset="conjunctive">GW boom vs seniors</button>
             <button type="button" class="preset-btn" data-preset="transfers">Potential transfers</button>
-            <button type="button" class="preset-btn" data-preset="huggins">Example: Huggins</button>
+            <button type="button" class="preset-btn" data-preset="arco">Lower river / Arco</button>
             <button type="button" class="preset-btn" data-preset="then-now">Then vs now</button>
           </div>
 
@@ -98,7 +98,7 @@ export function renderShell() {
           </button>
 
           <h2>Owner search</h2>
-          <input id="search" type="text" placeholder="Owner name (e.g. Huggins, Telford…)"
+          <input id="search" type="text" placeholder="Owner name (partial match)…"
             class="w-full border border-[var(--border)] rounded px-2 py-0.5 text-xs mb-0.5" />
           <div id="owner-search-results" class="text-[10px] max-h-24 overflow-auto border border-[var(--border)] rounded p-0.5 mb-0.5 hidden bg-[var(--panel)]"></div>
           <div id="owner-summary" class="mt-0.5 p-1 bg-[var(--panel)] border border-[var(--border)] rounded text-[10px] hidden">

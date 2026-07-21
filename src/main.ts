@@ -232,6 +232,10 @@ async function bootstrap() {
       state.selectedWRs = new Set()
       refreshData()
     },
+    focusArco: () => {
+      // USGS Arco gage vicinity — lower Big Lost
+      map.setView([43.635, -113.30], 11)
+    },
     resetAll: () => {
       if (timeline.isOpen()) timeline.close()
       resetState()

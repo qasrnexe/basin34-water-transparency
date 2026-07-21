@@ -12,9 +12,9 @@
 
 Build a **public transparency tool** that is a **delight to use on first visit**, and that makes one story unmistakable from public data:
 
-> Senior surface water rights and lower-basin users near Arco (including the Huggins family’s rights near the Quist pump area) sit below a river that routinely goes dry — while upstream and off-corridor development expanded. The channel, gages, rights, and wells should make that pattern legible without requiring a water lawyer.
+> Senior surface water rights and lower-basin users near Arco sit below a river that routinely goes dry — while upstream and off-corridor development expanded. The channel, gages, rights, and wells should make that pattern legible without requiring a water lawyer.
 
-**Personal anchor (example, not exclusive):** Charles Huggins (deceased) — family rights near Quist / lower Arco. Grandma’s well ran dry recently; City of Arco deepened a well ~500 ft. Use family rights as a clear worked example inside a basin-wide tool.
+**Do not name private individuals or families in the UI** as “examples.” Tell the story with geography, gages, priority, and public layers only. Owner search stays available for users who choose to look someone up themselves.
 
 **Tone:** Neutral, sourced, careful. Describe structure and evidence (priority, location, dry reaches, GW expansion). Do **not** assert illegal conduct. Label analysis lenses as geometric / priority / gage-based proxies, not court findings.
 
@@ -27,10 +27,7 @@ Build a **public transparency tool** that is a **delight to use on first visit**
 - UX problem: **sidebar is dense**; first visit doesn’t lead with the story.
 - Basemap defaults to OSM (`osm`), not satellite.
 - Data snapshot in `manifest.json`: **2026-06-09**.
-- Known data anchors already in extracts:
-  - Huggins rights (e.g. Big Lost River **34-13725** and others)
-  - Quist Pump diversions
-  - Large Telford / related development footprint in Basin 34
+- Known public geography anchors: Quist pump area, Arco gage, Moore diversion, Telford-area development appears in public IDWR extracts (do not special-case private families in the product UI).
 
 ---
 
@@ -65,7 +62,7 @@ Build a **public transparency tool** that is a **delight to use on first visit**
 2. River shrink: Mackay → Moore → Arco
 3. GW boom vs senior surface
 4. Potential new-ground transfers
-5. Owner example: **Huggins**
+5. Lower river / Arco focus
 6. Whole-basin explore
 
 ---
@@ -127,7 +124,6 @@ Suggested steps (refine copy while building):
 | 5 | `gw-boom` | Analysis: conjunctive / junior GW | Later GW & development pressure upstream / basin-wide |
 | 6 | `new-ground` | Analysis: transfers + new-ground | Water authorized onto ground far from corridor |
 | 7 | `arco-quist` | Zoom Quist / Arco lower river; highlight downstream seniors | Lower basin: dry channel vs paper rights |
-| 8 | `huggins-example` | Owner highlight Huggins + key WRs (e.g. 34-13725) | Worked example: family rights in this setting |
 
 **UX details**
 
@@ -139,7 +135,7 @@ Suggested steps (refine copy while building):
 **Done when**
 
 - [ ] A new user can complete the story without opening Explore
-- [ ] Huggins / Quist / Arco step is accurate to the data (spot-check WRs)
+- [ ] Quist / Arco step is accurate to the data (spot-check geography + seniors lens)
 - [ ] Captions reviewed for tone (neutral + clear)
 - [ ] Deployed
 
@@ -165,16 +161,10 @@ Suggested steps (refine copy while building):
 - Details panel: count, total cfs, list with zoom links
 - Caveat text always visible: proxy based on priority + geography + gage/channel layers
 
-**Huggins shortcut**
-
-- Preset “Example: Huggins rights” → owner highlight + zoom to cluster near Quist/Arco
-- List WR numbers in the caption with links to IDWR reports where available
-
 **Done when**
 
 - [ ] Rules documented in-app and in README
-- [ ] Huggins example lands correctly
-- [ ] Spot-check: known Quist/Telford features behave as expected in neighboring views
+- [ ] Spot-check: Quist / Arco geography + seniors lens behave as expected
 - [ ] Deployed
 
 ---
@@ -214,7 +204,7 @@ Suggested steps (refine copy while building):
 
 ### Phase 6 — Credibility & local-politics usefulness
 
-**Goals:** Useful beyond the family example.
+**Goals:** Useful for neighbors, press, and local officials.
 
 1. Export filtered table (CSV) for current preset / story step.
 2. Stronger citation block (“Data as of”, IDWR/USGS links, methodology blurb).
@@ -232,7 +222,7 @@ Suggested steps (refine copy while building):
 
 ```text
 Phase 1 (satellite + Story/Explore) 
-  → Phase 2 (guided story, include Huggins/Quist/Arco)
+  → Phase 2 (guided story through Quist/Arco lower river)
   → Phase 3 (dry-reach seniors lens)
   → Phase 4 (perf)
   → Phase 5 (mobile polish)
@@ -262,8 +252,7 @@ Do **not** wait for curtailment data to ship Phases 1–3. Those alone change ho
 
 1. Senior year cutoff for the dry-reach lens: **pre-1950** vs **pre-1970**?
 2. Story length: **6 steps** vs **8 steps**?
-3. How prominent is the Huggins name on the default story — **worked example** (recommended) vs quieter “owner preset only”?
-4. Should Explore remain 100% of today’s controls, or do we permanently retire low-value toggles?
+3. Should Explore remain 100% of today’s controls, or do we permanently retire low-value toggles?
 
 ---
 
@@ -275,7 +264,6 @@ A neighbor or county official who has never seen the app can, in under five minu
 2. See that the lower river goes dry in the modern record
 3. See senior downstream surface rights in that setting
 4. See later/upstream/off-corridor development pressure in the same dataset
-5. Optionally open the Huggins example and recognize a concrete local case
-6. Share a link that restores that view
+5. Share a link that restores that view
 
 When that works on a phone, the tool is doing its job.

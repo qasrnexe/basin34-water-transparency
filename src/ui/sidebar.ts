@@ -2,7 +2,6 @@ import type { DataStore } from '../data'
 import { state } from '../state'
 import type { Basemap, FlowEra, HighlightMode } from '../types'
 import { MODE_HINTS } from './legend'
-import { clearOwnerSearchUI } from './ownerSearch'
 
 export type UiMode = 'story' | 'explore'
 
@@ -23,6 +22,8 @@ export interface SidebarCallbacks {
   onUiMode?: (mode: UiMode) => void
   /** Owner highlight (story presets). */
   setOwnerHighlight?: (owner: string | null) => void
+  /** Zoom map to lower basin / Arco area. */
+  focusArco?: () => void
 }
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null
@@ -160,14 +161,14 @@ export function wireSidebar(cb: SidebarCallbacks) {
         cb.setFlowEra('recent')
         return
       }
-      if (preset === 'huggins') {
-        clearOwnerSearchUI()
-        const search = $<HTMLInputElement>('search')
-        if (search) search.value = 'HUGGINS'
-        state.ownerHighlight = 'HUGGINS'
-        state.selectedWRs = new Set()
+      if (preset === 'arco') {
+        // Lower basin focus near Arco gage (USGS 13132500)
+        state.flowEra = 'recent'
+        syncEraButtons()
+        cb.setFlowEra('recent')
         setHighlightMode('senior-downstream', cb)
-        cb.setOwnerHighlight?.('HUGGINS')
+        // Map zoom is applied via callback if provided
+        cb.focusArco?.()
         return
       }
     })
