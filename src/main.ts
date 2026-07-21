@@ -5,7 +5,7 @@ import './style.css'
 import L from 'leaflet'
 
 import { loadDataStoreLight, enrichDataStoreWithPou, pouGeomKey, type DataStore } from './data'
-import { applyHashToState, schedulePermalinkUpdate } from './permalink'
+import { applyHashToState, schedulePermalinkUpdate, setStoryStepForHash } from './permalink'
 import { state, resetState } from './state'
 import type { Basemap, GeoFeature, PodRecord } from './types'
 import { BasemapControl, createMap } from './map/createMap'
@@ -20,6 +20,7 @@ import { updateLegend } from './ui/legend'
 import { setupTimeline, type TimelineControl } from './ui/timeline'
 import { setupOwnerSearch, clearOwnerSearchUI } from './ui/ownerSearch'
 import { isModalOpen } from './ui/modal'
+import { goToStoryStep, setStoryStepIndex, wireStory } from './ui/story'
 import {
   closeDetails, FLOW_STEP_GAGES, showAppropriationPanel, showConjunctivePanel, showConflictsOverview, showDiversionDetails, showDryReachSeniorsPanel, showGageDetails,
   showGenericDetails, showPodDetails, showPouGroupDetails, showReachLossPanel, showTransfersOverview,
@@ -186,7 +187,10 @@ async function bootstrap() {
     currentBasemap = restored.basemap
     basemap.set(restored.basemap)
   }
-  if (restored.view) map.setView([restored.view.lat, restored.view.lng], restored.view.zoom)
+  if (restored.view && restored.storyStep == null) {
+    map.setView([restored.view.lat, restored.view.lng], restored.view.zoom)
+  }
+  if (restored.storyStep != null) setStoryStepIndex(restored.storyStep)
 
   setLoadStatus('Loading water rights & wells…', 20)
   store = await loadDataStoreLight(label => setLoadStatus(label, 35))
@@ -274,6 +278,20 @@ async function bootstrap() {
   })
   syncSidebarToState()
 
+  wireStory({
+    refreshData,
+    setFlowEra: era => staticLayers.setFlowEra(era),
+    setView: (lat, lon, zoom) => map.setView([lat, lon], zoom),
+    showRiverShrink: () => showReachLossPanel(),
+    showDryReach: () => showDryReachSeniorsPanel(store),
+    showTransfers: () => showTransfersOverview(store),
+    showConjunctive: () => showConjunctivePanel(store),
+    onStepChange: i => {
+      setStoryStepForHash(i)
+      updatePermalink()
+    },
+  })
+
   setupOwnerSearch(store, {
     onSelect: owner => {
       state.ownerHighlight = owner
@@ -323,6 +341,11 @@ async function bootstrap() {
   refreshData()
   setLoadStatus('Map ready — loading fields in background…', 70)
   hideLoadOverlay()
+
+  // Restore guided story step from the share link (after layers exist)
+  if (restored.storyStep != null) {
+    goToStoryStep(restored.storyStep, { openPanel: true })
+  }
 
   // Stage 3: POU + deferred heavy static layers (canals / NWI)
   void (async () => {

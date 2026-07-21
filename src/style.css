@@ -167,6 +167,63 @@ header .subtitle {
 }
 .story-muted { color: var(--text-muted); margin-bottom: 0; }
 
+.story-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+.story-nav-btn {
+  flex: 1;
+  font-size: 0.75rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+.story-nav-btn:hover:not(:disabled) { border-color: var(--accent); }
+.story-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.story-step-counter {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  min-width: 2.75rem;
+  text-align: center;
+}
+.story-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.35rem;
+  margin-top: 0.65rem;
+}
+.story-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--border);
+  cursor: pointer;
+}
+.story-dot.active { background: var(--accent); }
+.story-restart {
+  display: block;
+  width: 100%;
+  margin-top: 0.55rem;
+  font-size: 0.68rem;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .preset-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

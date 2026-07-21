@@ -22,20 +22,21 @@ export function renderShell() {
       <aside id="sidebar">
         <section id="story-panel" class="mode-panel">
           <div class="story-card">
-            <p class="story-kicker">Why this map</p>
-            <h2 class="story-title">A river that runs dry — and rights that remain</h2>
-            <p class="story-body">
-              This public viewer shows Water District 34 data so anyone can see how priority,
-              place, and measured flow fit together on the Big Lost River — especially on the
-              lower river near Arco, where the channel often goes dry while paper rights remain.
+            <p class="story-kicker" id="story-kicker">Step 1 · Basin</p>
+            <h2 class="story-title" id="story-title">A river that runs dry — and rights that remain</h2>
+            <p class="story-body" id="story-body">
+              Water District 34 covers the Big Lost River. This viewer uses public IDWR and USGS data so anyone can see how priority, place, and measured flow fit together — especially on the lower river near Arco.
             </p>
-            <p class="story-body story-muted">
-              Guided steps (Then vs now → river shrink → seniors → development) are next.
-              For now, use the presets below or switch to <strong>Explore</strong> for full controls.
-            </p>
+            <div class="story-nav">
+              <button type="button" id="story-prev" class="story-nav-btn" disabled>← Back</button>
+              <span id="story-step-counter" class="story-step-counter">1 / 7</span>
+              <button type="button" id="story-next" class="story-nav-btn">Next →</button>
+            </div>
+            <div id="story-dots" class="story-dots" aria-label="Story steps"></div>
+            <button type="button" id="story-restart" class="story-restart">Restart story</button>
           </div>
 
-          <h2>Start here</h2>
+          <h2>Jump to</h2>
           <div class="preset-grid">
             <button type="button" class="preset-btn" data-preset="dry-reach">Dry-reach seniors + CSV</button>
             <button type="button" class="preset-btn" data-preset="river-shrink">River shrink</button>

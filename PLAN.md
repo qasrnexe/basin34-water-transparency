@@ -28,7 +28,8 @@ A **public accountability / transparency tool** for Water District 34 (Big Lost 
 - [x] Live at water.bnm.farm; media-box is canonical git home
 - [x] Phase 1: satellite default, Story/Explore shell, presets, data-as-of
 - [x] **A+B:** staged first load + dry-reach seniors table/CSV
-- [ ] Guided story steps not finished (C)
+- [x] **C:** guided Story steps (7 geography-only steps)
+- [ ] Mobile polish (D)
 
 ---
 
@@ -37,8 +38,8 @@ A **public accountability / transparency tool** for Water District 34 (Big Lost 
 ```text
 A. Performance (staged load + loading UI)     ← DONE
 B. Accountability outputs (dry-reach list + CSV) ← DONE
-C. Guided Story steps (short, geography-only) ← NEXT
-D. Mobile polish
+C. Guided Story steps (short, geography-only) ← DONE
+D. Mobile polish                              ← NEXT
 E. Later: WD34 curtailment/accounting join
 ```
 
@@ -91,14 +92,21 @@ Do **not** add more Explore chrome until A+B feel usable (they should now).
 
 ---
 
-### C — Guided Story (after A+B) ← NEXT
+### C — Guided Story ← DONE
 
 6–7 steps, geography only: overview → then/now → river shrink → seniors → GW boom → transfers → Arco/lower river.  
 No private surnames in captions or presets.
 
+**Done when**
+
+- [x] Next / Back + step dots in Story mode
+- [x] Each step updates caption, map view, era / highlight, and optional panel
+- [x] Share link restores story step (`#…&s=N`)
+- [x] Deployed
+
 ---
 
-### D — Mobile polish
+### D — Mobile polish ← NEXT
 
 Bottom-sheet story, tap targets, chart lightbox on small screens.
 

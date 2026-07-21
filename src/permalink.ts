@@ -11,6 +11,8 @@ import type { Basemap, FlowEra, HighlightMode, PodColorMode } from './types'
 export interface RestoredView {
   basemap: Basemap | null
   view: { lat: number; lng: number; zoom: number } | null
+  /** Guided story step index (0-based), when present in the hash. */
+  storyStep: number | null
 }
 
 /** Short hash key → boolean state accessor. */
@@ -28,6 +30,13 @@ const BOOLS: Record<string, { get: () => boolean; set: (v: boolean) => void; def
   }
 })()
 
+/** Current guided-story step written into share links (set from main/story). */
+let storyStepForHash: number | null = null
+
+export function setStoryStepForHash(step: number | null) {
+  storyStepForHash = step
+}
+
 export function encodeHash(basemap: Basemap, map: L.Map): string {
   const d = defaultState()
   const p = new URLSearchParams()
@@ -41,6 +50,7 @@ export function encodeHash(basemap: Basemap, map: L.Map): string {
   if (state.flowEra !== d.flowEra) p.set('fe', state.flowEra)
   if (state.ownerHighlight) p.set('o', state.ownerHighlight)
   if (state.selectedWRs.size > 0) p.set('sel', [...state.selectedWRs].join(','))
+  if (storyStepForHash != null && storyStepForHash > 0) p.set('s', String(storyStepForHash))
   for (const [key, b] of Object.entries(BOOLS)) {
     if (b.get() !== b.def) p.set(key, b.get() ? '1' : '0')
   }
@@ -53,7 +63,7 @@ export function encodeHash(basemap: Basemap, map: L.Map): string {
 
 /** Mutates `state` from the current location hash; returns map view/basemap to restore. */
 export function applyHashToState(): RestoredView {
-  const out: RestoredView = { basemap: null, view: null }
+  const out: RestoredView = { basemap: null, view: null, storyStep: null }
   const raw = location.hash.replace(/^#/, '')
   if (!raw) return out
   const p = new URLSearchParams(raw)
@@ -74,6 +84,11 @@ export function applyHashToState(): RestoredView {
   if (p.get('o')) state.ownerHighlight = p.get('o')
   const sel = p.get('sel')
   if (sel) state.selectedWRs = new Set(sel.split(',').filter(Boolean))
+  const s = parseInt(p.get('s') || '', 10)
+  if (isFinite(s) && s >= 0) {
+    out.storyStep = s
+    storyStepForHash = s
+  }
   for (const [key, b] of Object.entries(BOOLS)) {
     const v = p.get(key)
     if (v === '0' || v === '1') b.set(v === '1')
