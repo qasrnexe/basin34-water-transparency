@@ -37,6 +37,7 @@ export function renderShell() {
 
           <h2>Start here</h2>
           <div class="preset-grid">
+            <button type="button" class="preset-btn" data-preset="dry-reach">Dry-reach seniors + CSV</button>
             <button type="button" class="preset-btn" data-preset="river-shrink">River shrink</button>
             <button type="button" class="preset-btn" data-preset="senior">Senior downstream</button>
             <button type="button" class="preset-btn" data-preset="conjunctive">GW boom vs seniors</button>
@@ -87,6 +88,9 @@ export function renderShell() {
           <div class="text-[10px] text-[var(--text-muted)] leading-tight mt-0.5">
             Click a field (POU), POD ★, or gage for details. Esc or map background clears selection.
           </div>
+          <button id="dry-reach-btn" class="text-xs px-2 py-1 mt-1 w-full border border-[var(--border)] rounded hover:bg-[var(--border)]">
+            Downstream seniors on a dry reach + CSV
+          </button>
           <button id="appropriation-btn" class="text-xs px-2 py-1 mt-1 w-full border border-[var(--border)] rounded hover:bg-[var(--border)]">
             Appropriation vs. supply over time
           </button>
@@ -204,6 +208,14 @@ export function renderShell() {
       <div id="modal" role="dialog" aria-modal="true">
         <button id="modal-close" title="Close (Esc)">✕</button>
         <div id="modal-content"></div>
+      </div>
+    </div>
+
+    <div id="load-overlay">
+      <div class="load-card">
+        <div class="load-title">Basin 34</div>
+        <div id="load-status">Starting…</div>
+        <div class="load-bar"><div id="load-bar-fill"></div></div>
       </div>
     </div>
   `

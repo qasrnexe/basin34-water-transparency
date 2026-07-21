@@ -355,6 +355,60 @@ main {
   color: var(--text-muted);
 }
 
+/* First-load progress overlay */
+#load-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(14, 165, 233, 0.18), transparent 55%),
+    radial-gradient(ellipse at 70% 80%, rgba(22, 101, 52, 0.2), transparent 50%),
+    rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(2px);
+}
+#load-overlay.hidden {
+  display: none;
+  pointer-events: none;
+}
+.load-card {
+  width: min(320px, 88vw);
+  padding: 1.25rem 1.4rem;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.92);
+  color: #e2e8f0;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  text-align: center;
+}
+.load-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.45rem;
+}
+#load-status {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  min-height: 1.2em;
+  margin-bottom: 0.75rem;
+}
+.load-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(148, 163, 184, 0.25);
+  overflow: hidden;
+}
+#load-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #0ea5e9, #16a34a);
+  transition: width 0.25s ease;
+}
+
 /* Lightbox modal (gage history + basin analyses) */
 #modal-backdrop {
   position: fixed;

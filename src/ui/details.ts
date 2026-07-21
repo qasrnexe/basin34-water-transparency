@@ -5,6 +5,13 @@ import { state } from '../state'
 import { fetchAnnualMeans, fetchGageFlowHistory, mergedYearSeries, type AnnualMean, type GageFlowHistory } from '../usgs'
 import { enhanceCharts, seriesFromPointsWithGaps, svgChart } from './chart'
 import { openModal } from './modal'
+import {
+  DRY_REACH_METHODOLOGY,
+  DRY_REACH_SENIOR_YEAR,
+  dryReachSeniorsToCsv,
+  downloadCsv,
+  listDryReachSeniors,
+} from '../dryReach'
 
 /** Width for charts rendered inside the lightbox modal. */
 const MODAL_CHART_W = 640
@@ -757,4 +764,51 @@ function priorityBadge(year: number): string {
 
 function transferBadge(distKm: number): string {
   return ` <span class="badge badge-transfer">POD ${distKm.toFixed(1)} km from POU — potential transfer</span>`
+}
+
+/** Ranked table + CSV for downstream seniors on a dry-reach proxy. */
+export function showDryReachSeniorsPanel(store: DataStore) {
+  const rows = listDryReachSeniors(store)
+  const totalCfs = rows.reduce((s, r) => s + r.rate, 0)
+  let html =
+    `<h2 style="margin-top:0">Downstream seniors on a dry reach</h2>` +
+    `<p style="font-size:0.85em;line-height:1.45;color:var(--text-muted)">${DRY_REACH_METHODOLOGY}</p>` +
+    `<p style="font-size:0.9em"><strong>${rows.length}</strong> rights · ` +
+    `<strong>${totalCfs.toFixed(1)}</strong> cfs combined max diversion · priority before ${DRY_REACH_SENIOR_YEAR}</p>` +
+    `<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">` +
+    `<button type="button" id="dry-reach-csv" class="zoom-btn">Download CSV</button>` +
+    `</div>`
+
+  if (!rows.length) {
+    html += `<p>No matching rights with current corridor distances loaded yet. Wait for data finish, then retry.</p>`
+    openModal(html)
+    return
+  }
+
+  html += `<div style="overflow:auto;max-height:55vh"><table style="width:100%;border-collapse:collapse;font-size:0.8em">` +
+    `<thead><tr>` +
+    `<th style="text-align:left;padding:4px;border-bottom:1px solid var(--border)">Right</th>` +
+    `<th style="text-align:left;padding:4px;border-bottom:1px solid var(--border)">Owner</th>` +
+    `<th style="text-align:right;padding:4px;border-bottom:1px solid var(--border)">Year</th>` +
+    `<th style="text-align:right;padding:4px;border-bottom:1px solid var(--border)">cfs</th>` +
+    `<th style="text-align:left;padding:4px;border-bottom:1px solid var(--border)"></th>` +
+    `</tr></thead><tbody>`
+
+  for (const r of rows.slice(0, 200)) {
+    html += `<tr>` +
+      `<td style="padding:4px;border-bottom:1px solid var(--border)"><code>${r.wr}</code></td>` +
+      `<td style="padding:4px;border-bottom:1px solid var(--border)">${r.owner || '—'}</td>` +
+      `<td style="padding:4px;border-bottom:1px solid var(--border);text-align:right">${r.year}</td>` +
+      `<td style="padding:4px;border-bottom:1px solid var(--border);text-align:right">${r.rate.toFixed(2)}</td>` +
+      `<td style="padding:4px;border-bottom:1px solid var(--border)">` +
+      `<button type="button" class="zoom-btn" data-zoom-wr="${r.wr}">Zoom</button></td>` +
+      `</tr>`
+  }
+  html += `</tbody></table></div>`
+  if (rows.length > 200) html += `<p style="font-size:0.8em;color:var(--text-muted)">Showing top 200 of ${rows.length}. CSV includes all.</p>`
+
+  openModal(html)
+  document.getElementById('dry-reach-csv')?.addEventListener('click', () => {
+    downloadCsv('basin34-downstream-seniors-dry-reach.csv', dryReachSeniorsToCsv(rows))
+  })
 }

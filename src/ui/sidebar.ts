@@ -18,6 +18,8 @@ export interface SidebarCallbacks {
   showAppropriation?: () => void
   /** "River shrink: Mackay → Moore → Arco" button. */
   showRiverShrink?: () => void
+  /** Dry-reach seniors ranked table + CSV. */
+  showDryReach?: () => void
   /** Permalink / persistence hook when UI mode changes. */
   onUiMode?: (mode: UiMode) => void
   /** Owner highlight (story presets). */
@@ -143,6 +145,10 @@ export function wireSidebar(cb: SidebarCallbacks) {
         cb.showRiverShrink?.()
         return
       }
+      if (preset === 'dry-reach') {
+        cb.showDryReach?.()
+        return
+      }
       if (preset === 'senior') {
         setHighlightMode('senior-downstream', cb)
         return
@@ -210,6 +216,7 @@ export function wireSidebar(cb: SidebarCallbacks) {
 
   $('appropriation-btn')?.addEventListener('click', () => cb.showAppropriation?.())
   $('river-shrink-btn')?.addEventListener('click', () => cb.showRiverShrink?.())
+  $('dry-reach-btn')?.addEventListener('click', () => cb.showDryReach?.())
 
   // POD filters
   $<HTMLSelectElement>('pod-color-mode')?.addEventListener('change', e => {

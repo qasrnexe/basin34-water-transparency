@@ -148,14 +148,60 @@ async function fetchFeatures(url: string): Promise<GeoFeature[]> {
   }
 }
 
-export async function loadDataStore(): Promise<DataStore> {
-  const [podFeats, wellFeats, pouFeats, reachFeats, mainstemFeats, riparianFeats] = await Promise.all([
+function buildCorridorPts(mainstemFeats: GeoFeature[], riparianFeats: GeoFeature[]): Array<[number, number]> {
+  const corridorPts: Array<[number, number]> = []
+  for (const f of mainstemFeats) {
+    const g = f.geometry
+    if (!g?.coordinates) continue
+    const lines: number[][][] =
+      g.type === 'LineString' ? [g.coordinates] :
+      g.type === 'MultiLineString' ? g.coordinates : []
+    for (const line of lines) {
+      for (const [lon, lat] of line) corridorPts.push([lat, lon])
+    }
+  }
+  for (const f of riparianFeats) {
+    const c = geomBBoxCenter(f.geometry)
+    if (c) corridorPts.push(c)
+  }
+  return corridorPts
+}
+
+function applyCorridorDistances(pods: PodRecord[], corridorPts: Array<[number, number]>) {
+  if (!corridorPts.length) return
+  for (const pod of pods) {
+    let best = Infinity
+    for (const [lat, lon] of corridorPts) {
+      if (Math.abs(lat - pod.lat) * 111 >= best) continue
+      const d = distKm(pod.lat, pod.lon, lat, lon)
+      if (d < best) best = d
+    }
+    pod.corridorDistKm = best
+  }
+}
+
+function emptyStore(): DataStore {
+  return {
+    pods: [], wells: [], pous: [],
+    podsByWR: new Map(), pousByWR: new Map(), geomKeyToWRs: new Map(),
+    transferDistKm: new Map(), corridorDistKm: new Map(), newGroundWRs: new Set(),
+    pouCenter: new Map(), reaches: [], reachSouthLat: new Map(), owners: [],
+  }
+}
+
+/**
+ * Stage 1+2: PODs, wells, reaches, mainstem corridor — enough for map points + dry-reach lens.
+ * POU (large) loads later via {@link enrichDataStoreWithPou}.
+ */
+export async function loadDataStoreLight(
+  onProgress?: (label: string) => void,
+): Promise<DataStore> {
+  onProgress?.('Loading water rights & wells…')
+  const [podFeats, wellFeats, reachFeats, mainstemFeats] = await Promise.all([
     fetchFeatures('/data/wd34-pods.geojson'),
     fetchFeatures('/data/wd34-wells.geojson'),
-    fetchFeatures('/data/wd34-pou.geojson'),
     fetchFeatures('/data/wd34-admin-reaches.geojson'),
     fetchFeatures('/data/nhd-mainstem.geojson'),
-    fetchFeatures('/data/nwi-riparian.geojson'),
   ])
 
   const pods: PodRecord[] = podFeats
@@ -195,22 +241,6 @@ export async function loadDataStore(): Promise<DataStore> {
       }
     })
 
-  const pous: PouRecord[] = pouFeats
-    .map(f => {
-      const areaKm2 = polygonAreaKm2(f.geometry)
-      // Stash on properties so the POU layer's style callback (which only
-      // receives the GeoJSON feature) can tell fields from district areas.
-      if (f.properties) f.properties.__areaKm2 = areaKm2
-      return {
-        feature: f,
-        wr: (f.properties?.WaterRightNumber || '').trim(),
-        geomKey: pouGeomKey(f.geometry),
-        areaKm2,
-      }
-    })
-    .filter(r => r.wr !== '')
-
-  // Indexes
   const podsByWR = new Map<string, PodRecord[]>()
   for (const r of pods) {
     if (!r.wr) continue
@@ -219,89 +249,8 @@ export async function loadDataStore(): Promise<DataStore> {
     else podsByWR.set(r.wr, [r])
   }
 
-  const pousByWR = new Map<string, PouRecord[]>()
-  const geomKeyToWRs = new Map<string, Set<string>>()
-  for (const r of pous) {
-    const list = pousByWR.get(r.wr)
-    if (list) list.push(r)
-    else pousByWR.set(r.wr, [r])
-    if (r.geomKey) {
-      let set = geomKeyToWRs.get(r.geomKey)
-      if (!set) geomKeyToWRs.set(r.geomKey, (set = new Set()))
-      set.add(r.wr)
-    }
-  }
+  applyCorridorDistances(pods, buildCorridorPts(mainstemFeats, []))
 
-  // POU centers + transfer detection (POD far from its place of use)
-  const pouCenter = new Map<string, [number, number]>()
-  const transferDistKm = new Map<string, number>()
-  pousByWR.forEach((pouList, wr) => {
-    const center = geomBBoxCenter(pouList[0].feature.geometry)
-    if (!center) return
-    pouCenter.set(wr, center)
-    const podList = podsByWR.get(wr)
-    if (!podList?.length) return
-    // Edge-adjusted distance: subtract the polygon's equivalent radius so a POD
-    // sitting inside (or just outside) a huge district/service-area POU is not
-    // flagged as a transfer merely because the polygon's *center* is far away.
-    const dCenter = distKm(center[0], center[1], podList[0].lat, podList[0].lon)
-    const d = dCenter - Math.sqrt(pouList[0].areaKm2 / Math.PI)
-    if (d > TRANSFER_DIST_KM) {
-      transferDistKm.set(wr, d)
-      for (const pod of podList) pod.isTransfer = true
-    }
-  })
-
-  // Natural-corridor reference points: every mainstem vertex + every riparian
-  // polygon centroid. Distance from a transfer's POU center to the nearest of
-  // these is the "new ground" proxy (see NEW_GROUND_KM).
-  const corridorPts: Array<[number, number]> = [] // [lat, lon]
-  for (const f of mainstemFeats) {
-    const g = f.geometry
-    if (!g?.coordinates) continue
-    const lines: number[][][] =
-      g.type === 'LineString' ? [g.coordinates] :
-      g.type === 'MultiLineString' ? g.coordinates : []
-    for (const line of lines) {
-      for (const [lon, lat] of line) corridorPts.push([lat, lon])
-    }
-  }
-  for (const f of riparianFeats) {
-    const c = geomBBoxCenter(f.geometry)
-    if (c) corridorPts.push(c)
-  }
-
-  if (corridorPts.length) {
-    for (const pod of pods) {
-      let best = Infinity
-      for (const [lat, lon] of corridorPts) {
-        if (Math.abs(lat - pod.lat) * 111 >= best) continue
-        const d = distKm(pod.lat, pod.lon, lat, lon)
-        if (d < best) best = d
-      }
-      pod.corridorDistKm = best
-    }
-  }
-
-  const corridorDistKm = new Map<string, number>()
-  const newGroundWRs = new Set<string>()
-  if (corridorPts.length) {
-    transferDistKm.forEach((_d, wr) => {
-      const center = pouCenter.get(wr)
-      if (!center) return
-      let best = Infinity
-      for (const [lat, lon] of corridorPts) {
-        // Cheap rejection on latitude alone before the full distance
-        if (Math.abs(lat - center[0]) * 111 >= best) continue
-        const d = distKm(center[0], center[1], lat, lon)
-        if (d < best) best = d
-      }
-      corridorDistKm.set(wr, best)
-      if (best > NEW_GROUND_KM) newGroundWRs.add(wr)
-    })
-  }
-
-  // Reaches: southernmost latitude per reach (river flows roughly south)
   const reachSouthLat = new Map<string, number>()
   for (const f of reachFeats) {
     const id = f.properties?.reach_id
@@ -314,10 +263,95 @@ export async function loadDataStore(): Promise<DataStore> {
   const owners = Array.from(new Set(pods.map(r => r.owner).filter(Boolean))).sort()
 
   return {
-    pods, wells, pous,
-    podsByWR, pousByWR, geomKeyToWRs,
-    transferDistKm, corridorDistKm, newGroundWRs, pouCenter,
+    ...emptyStore(),
+    pods, wells,
+    podsByWR,
     reaches: reachFeats, reachSouthLat,
     owners,
   }
+}
+
+/** Stage 3: POU polygons + transfer / new-ground enrichment (+ optional riparian for corridor). */
+export async function enrichDataStoreWithPou(
+  store: DataStore,
+  onProgress?: (label: string) => void,
+): Promise<void> {
+  onProgress?.('Loading places of use (large file)…')
+  const [pouFeats, riparianFeats, mainstemFeats] = await Promise.all([
+    fetchFeatures('/data/wd34-pou.geojson'),
+    fetchFeatures('/data/nwi-riparian.geojson'),
+    fetchFeatures('/data/nhd-mainstem.geojson'),
+  ])
+
+  const pous: PouRecord[] = pouFeats
+    .map(f => {
+      const areaKm2 = polygonAreaKm2(f.geometry)
+      if (f.properties) f.properties.__areaKm2 = areaKm2
+      return {
+        feature: f,
+        wr: (f.properties?.WaterRightNumber || '').trim(),
+        geomKey: pouGeomKey(f.geometry),
+        areaKm2,
+      }
+    })
+    .filter(r => r.wr !== '')
+
+  store.pous = pous
+  store.pousByWR = new Map()
+  store.geomKeyToWRs = new Map()
+  for (const r of pous) {
+    const list = store.pousByWR.get(r.wr)
+    if (list) list.push(r)
+    else store.pousByWR.set(r.wr, [r])
+    if (r.geomKey) {
+      let set = store.geomKeyToWRs.get(r.geomKey)
+      if (!set) store.geomKeyToWRs.set(r.geomKey, (set = new Set()))
+      set.add(r.wr)
+    }
+  }
+
+  // Refresh corridor with riparian centroids too
+  applyCorridorDistances(store.pods, buildCorridorPts(mainstemFeats, riparianFeats))
+
+  store.pouCenter = new Map()
+  store.transferDistKm = new Map()
+  store.corridorDistKm = new Map()
+  store.newGroundWRs = new Set()
+
+  store.pousByWR.forEach((pouList, wr) => {
+    const center = geomBBoxCenter(pouList[0].feature.geometry)
+    if (!center) return
+    store.pouCenter.set(wr, center)
+    const podList = store.podsByWR.get(wr)
+    if (!podList?.length) return
+    const dCenter = distKm(center[0], center[1], podList[0].lat, podList[0].lon)
+    const d = dCenter - Math.sqrt(pouList[0].areaKm2 / Math.PI)
+    if (d > TRANSFER_DIST_KM) {
+      store.transferDistKm.set(wr, d)
+      for (const pod of podList) pod.isTransfer = true
+    }
+  })
+
+  const corridorPts = buildCorridorPts(mainstemFeats, riparianFeats)
+  if (corridorPts.length) {
+    store.transferDistKm.forEach((_d, wr) => {
+      const center = store.pouCenter.get(wr)
+      if (!center) return
+      let best = Infinity
+      for (const [lat, lon] of corridorPts) {
+        if (Math.abs(lat - center[0]) * 111 >= best) continue
+        const d = distKm(center[0], center[1], lat, lon)
+        if (d < best) best = d
+      }
+      store.corridorDistKm.set(wr, best)
+      if (best > NEW_GROUND_KM) store.newGroundWRs.add(wr)
+    })
+  }
+}
+
+/** Full load (tests / simple callers). */
+export async function loadDataStore(): Promise<DataStore> {
+  const store = await loadDataStoreLight()
+  await enrichDataStoreWithPou(store)
+  return store
 }

@@ -4,7 +4,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import './style.css'
 import L from 'leaflet'
 
-import { loadDataStore, pouGeomKey, type DataStore } from './data'
+import { loadDataStoreLight, enrichDataStoreWithPou, pouGeomKey, type DataStore } from './data'
 import { applyHashToState, schedulePermalinkUpdate } from './permalink'
 import { state, resetState } from './state'
 import type { Basemap, GeoFeature, PodRecord } from './types'
@@ -21,7 +21,7 @@ import { setupTimeline, type TimelineControl } from './ui/timeline'
 import { setupOwnerSearch, clearOwnerSearchUI } from './ui/ownerSearch'
 import { isModalOpen } from './ui/modal'
 import {
-  closeDetails, FLOW_STEP_GAGES, showAppropriationPanel, showConjunctivePanel, showConflictsOverview, showDiversionDetails, showGageDetails,
+  closeDetails, FLOW_STEP_GAGES, showAppropriationPanel, showConjunctivePanel, showConflictsOverview, showDiversionDetails, showDryReachSeniorsPanel, showGageDetails,
   showGenericDetails, showPodDetails, showPouGroupDetails, showReachLossPanel, showTransfersOverview,
   showWellDetails,
 } from './ui/details'
@@ -160,14 +160,25 @@ function zoomToGage(site: string) {
 
 // ---------- Bootstrap ----------
 
+function setLoadStatus(label: string, pct: number) {
+  const status = document.getElementById('load-status')
+  const fill = document.getElementById('load-bar-fill')
+  if (status) status.textContent = label
+  if (fill) fill.style.width = `${Math.max(0, Math.min(100, pct))}%`
+}
+
+function hideLoadOverlay() {
+  document.getElementById('load-overlay')?.classList.add('hidden')
+}
+
 async function bootstrap() {
   renderShell()
   void loadDataAsOf()
+  setLoadStatus('Building map…', 8)
+
   map = createMap()
   basemap = new BasemapControl(map)
   basemap.set('satellite')
-
-  store = await loadDataStore()
 
   // Restore a shared view (URL hash) before the first render
   const restored = applyHashToState()
@@ -177,6 +188,10 @@ async function bootstrap() {
   }
   if (restored.view) map.setView([restored.view.lat, restored.view.lng], restored.view.zoom)
 
+  setLoadStatus('Loading water rights & wells…', 20)
+  store = await loadDataStoreLight(label => setLoadStatus(label, 35))
+
+  setLoadStatus('Drawing channels & gages…', 50)
   podLayer = new PodLayer(map, store, onPodClick)
   wellLayer = new WellLayer(map, store, rec => showWellDetails(rec))
   pouLayer = new PouLayer(map, store, onPouClick)
@@ -191,7 +206,7 @@ async function bootstrap() {
       syncReachSelect()
       refreshData()
     },
-  })
+  }, { deferHeavy: true })
   staticLayers.setFlowEra(state.flowEra)
 
   populateReachSelect(store)
@@ -206,6 +221,14 @@ async function bootstrap() {
       } else if (key === 'diversions') {
         diversionLayer.setEnabled(on)
       } else {
+        if (on && (key === 'riparian' || key === 'hydro')) {
+          void staticLayers.loadHeavy().then(() => {
+            const group = staticLayers.groups[key]
+            if (group) map.addLayer(group)
+            updateLegendNow()
+          })
+          return
+        }
         const group = staticLayers.groups[key]
         if (group) {
           if (on) map.addLayer(group)
@@ -225,8 +248,12 @@ async function bootstrap() {
       else if (mode === 'conflict') showConflictsOverview(store)
       else if (mode === 'conjunctive') showConjunctivePanel(store)
     },
+    onUiMode: mode => {
+      if (mode === 'explore') void staticLayers.loadHeavy()
+    },
     showAppropriation: () => showAppropriationPanel(store),
     showRiverShrink: () => showReachLossPanel(),
+    showDryReach: () => showDryReachSeniorsPanel(store),
     setOwnerHighlight: owner => {
       state.ownerHighlight = owner
       state.selectedWRs = new Set()
@@ -281,17 +308,34 @@ async function bootstrap() {
     const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-zoom-wr]')
     if (btn?.dataset.zoomWr) zoomToWR(btn.dataset.zoomWr)
   })
-  // Gage zoom + step-down chart buttons (modal, gage popups, channel popups)
+  // Gage / WR zoom + step-down chart buttons (modal, gage popups, channel popups)
   document.addEventListener('click', e => {
     const t = e.target as HTMLElement
     const gageBtn = t.closest<HTMLElement>('[data-zoom-gage]')
     if (gageBtn?.dataset.zoomGage) zoomToGage(gageBtn.dataset.zoomGage)
+    const wrBtn = t.closest<HTMLElement>('[data-zoom-wr]')
+    if (wrBtn?.dataset.zoomWr && wrBtn.closest('#modal-content')) zoomToWR(wrBtn.dataset.zoomWr)
     if (t.closest('[data-show-shrink]')) showReachLossPanel()
   })
 
   map.on('moveend', updatePermalink)
 
   refreshData()
+  setLoadStatus('Map ready — loading fields in background…', 70)
+  hideLoadOverlay()
+
+  // Stage 3: POU + deferred heavy static layers (canals / NWI)
+  void (async () => {
+    try {
+      await enrichDataStoreWithPou(store, label => setLoadStatus(label, 85))
+      pouLayer.setVisibleWRs(podLayer.visibleWRs())
+      await staticLayers.loadHeavy()
+      setLoadStatus('All layers loaded', 100)
+    } catch (err) {
+      console.error('Background layer load failed', err)
+      setLoadStatus('Some layers failed to load', 100)
+    }
+  })()
 
   // A restored analysis view opens its overview panel like a user selection would
   if (state.highlightMode === 'transfers') showTransfersOverview(store)
