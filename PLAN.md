@@ -138,11 +138,18 @@ Bottom-sheet story, tap targets, chart lightbox on small screens.
 
 ## Success criteria
 
-In under five minutes, a new visitor can:
+In under five minutes **on a phone**, a new visitor can:
 
-1. See the basin on satellite without a long freeze  
-2. See the lower river dry in the modern record  
-3. Open a **ranked list + CSV** of downstream seniors on that dry-reach proxy  
+1. See the basin on satellite without a long freeze (Story starts with river/gages — not 7k stars)
+2. See the lower river dry in the modern record
+3. Open a **ranked list + CSV** of downstream seniors on that dry-reach proxy
 4. Share a link that restores the view  
 
 When that works on a phone in a county meeting, the tool is doing its job.
+
+### Phone UX notes (2026-07-21)
+
+- Story steps 1–3: **no POD/well markers** (channel + gages + diversions only)
+- Analysis steps: show **matching rights only** (~391 seniors vs ~7k all), harder clustering
+- Wells / POU / NWI deferred until needed; charts/tables open via explicit buttons (not auto-modals)
+- Throttled mobile test: interactive overlay ~2–3s; step 4 paints ~391 PODs / ~80 cluster icons
