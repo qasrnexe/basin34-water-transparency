@@ -15,7 +15,7 @@ A **public accountability / transparency tool** for Water District 34 (Big Lost 
 1. **Fast enough to use** in a meeting (not a 26MB stutter-fest)
 2. **Clear enough** that a neighbor can see: lower river goes dry; senior surface rights sit there; later development expanded upstream / off-corridor
 3. **Exportable** — ranked tables + CSV, not only a map
-4. **Careful** — evidence and methodology, no accusations, **no named private families as featured examples**
+4. **Careful** — evidence and methodology, no accusations; **do not feature private families as the default “example”** in Story captions/presets. Owner names from IDWR stay in the data, search, tables, and CSV.
 
 > Think “receipts + rankings + map,” not “heavy GIS for its own sake.”
 

@@ -777,9 +777,18 @@ export function showDryReachSeniorsPanel(store: DataStore) {
     `<p style="font-size:0.85em;line-height:1.45;color:var(--text-muted)">${DRY_REACH_METHODOLOGY}</p>` +
     `<p style="font-size:0.9em"><strong>${rows.length}</strong> rights · ` +
     `<strong>${totalCfs.toFixed(1)}</strong> cfs combined max diversion · priority before ${DRY_REACH_SENIOR_YEAR}</p>` +
-    `<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">` +
+    `<p style="font-size:0.8em;color:var(--text-muted);margin:6px 0 0">` +
+    `Owner names come straight from the IDWR extract — nothing is scrubbed. ` +
+    `Junior rights (1950+) and PODs north of Moore are outside this lens even if the same owner has them.</p>` +
+    `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0">` +
     `<button type="button" id="dry-reach-csv" class="zoom-btn">Download CSV</button>` +
-    `</div>`
+    `<label style="font-size:0.8em;display:flex;align-items:center;gap:6px;flex:1;min-width:180px">` +
+    `Filter owner ` +
+    `<input id="dry-reach-owner-filter" type="search" placeholder="Type any owner name…" ` +
+    `style="flex:1;min-width:140px;padding:6px 8px;border:1px solid var(--border-strong);border-radius:4px;background:var(--control-bg);color:var(--text)" />` +
+    `</label>` +
+    `</div>` +
+    `<p id="dry-reach-filter-status" style="font-size:0.8em;color:var(--text-muted);min-height:1.2em"></p>`
 
   if (!rows.length) {
     html += `<p>No matching rights with current corridor distances loaded yet. Wait for data finish, then retry.</p>`
@@ -789,28 +798,68 @@ export function showDryReachSeniorsPanel(store: DataStore) {
 
   html += `<div style="overflow:auto;max-height:55vh"><table style="width:100%;border-collapse:collapse;font-size:0.8em">` +
     `<thead><tr>` +
+    `<th style="text-align:right;padding:4px;border-bottom:1px solid var(--border)">#</th>` +
     `<th style="text-align:left;padding:4px;border-bottom:1px solid var(--border)">Right</th>` +
     `<th style="text-align:left;padding:4px;border-bottom:1px solid var(--border)">Owner</th>` +
     `<th style="text-align:right;padding:4px;border-bottom:1px solid var(--border)">Year</th>` +
     `<th style="text-align:right;padding:4px;border-bottom:1px solid var(--border)">cfs</th>` +
     `<th style="text-align:left;padding:4px;border-bottom:1px solid var(--border)"></th>` +
-    `</tr></thead><tbody>`
+    `</tr></thead><tbody id="dry-reach-tbody">`
 
-  for (const r of rows.slice(0, 200)) {
-    html += `<tr>` +
-      `<td style="padding:4px;border-bottom:1px solid var(--border)"><code>${r.wr}</code></td>` +
-      `<td style="padding:4px;border-bottom:1px solid var(--border)">${r.owner || '—'}</td>` +
-      `<td style="padding:4px;border-bottom:1px solid var(--border);text-align:right">${r.year}</td>` +
-      `<td style="padding:4px;border-bottom:1px solid var(--border);text-align:right">${r.rate.toFixed(2)}</td>` +
-      `<td style="padding:4px;border-bottom:1px solid var(--border)">` +
-      `<button type="button" class="zoom-btn" data-zoom-wr="${r.wr}">Zoom</button></td>` +
-      `</tr>`
+  const renderRows = (list: typeof rows) => {
+    const max = 200
+    let body = ''
+    for (let i = 0; i < Math.min(list.length, max); i++) {
+      const r = list[i]
+      // Rank is position in the full (unfiltered) sort when possible
+      const rank = rows.indexOf(r) + 1
+      body += `<tr>` +
+        `<td style="padding:4px;border-bottom:1px solid var(--border);text-align:right;color:var(--text-muted)">${rank}</td>` +
+        `<td style="padding:4px;border-bottom:1px solid var(--border)"><code>${r.wr}</code></td>` +
+        `<td style="padding:4px;border-bottom:1px solid var(--border)">${r.owner || '—'}</td>` +
+        `<td style="padding:4px;border-bottom:1px solid var(--border);text-align:right">${r.year}</td>` +
+        `<td style="padding:4px;border-bottom:1px solid var(--border);text-align:right">${r.rate.toFixed(2)}</td>` +
+        `<td style="padding:4px;border-bottom:1px solid var(--border)">` +
+        `<button type="button" class="zoom-btn" data-zoom-wr="${r.wr}">Zoom</button></td>` +
+        `</tr>`
+    }
+    if (!list.length) {
+      body = `<tr><td colspan="6" style="padding:12px;color:var(--text-muted)">No rights match that owner filter under the dry-reach rules.</td></tr>`
+    }
+    return { body, truncated: list.length > max }
   }
+
+  const initial = renderRows(rows)
+  html += initial.body
   html += `</tbody></table></div>`
-  if (rows.length > 200) html += `<p style="font-size:0.8em;color:var(--text-muted)">Showing top 200 of ${rows.length}. CSV includes all.</p>`
+  html += `<p id="dry-reach-truncate-note" class="text-[0.8em]" style="font-size:0.8em;color:var(--text-muted)">${
+    initial.truncated ? `Showing top 200 of ${rows.length}. CSV includes all.` : ''
+  }</p>`
 
   openModal(html)
+
   document.getElementById('dry-reach-csv')?.addEventListener('click', () => {
-    downloadCsv('basin34-downstream-seniors-dry-reach.csv', dryReachSeniorsToCsv(rows))
+    const q = (document.getElementById('dry-reach-owner-filter') as HTMLInputElement | null)?.value.trim().toLowerCase() || ''
+    const exportRows = q ? rows.filter(r => r.owner.toLowerCase().includes(q)) : rows
+    downloadCsv('basin34-downstream-seniors-dry-reach.csv', dryReachSeniorsToCsv(exportRows))
+  })
+
+  const input = document.getElementById('dry-reach-owner-filter') as HTMLInputElement | null
+  const tbody = document.getElementById('dry-reach-tbody')
+  const status = document.getElementById('dry-reach-filter-status')
+  const note = document.getElementById('dry-reach-truncate-note')
+  input?.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase()
+    const filtered = q ? rows.filter(r => r.owner.toLowerCase().includes(q)) : rows
+    const rendered = renderRows(filtered)
+    if (tbody) tbody.innerHTML = rendered.body
+    if (status) {
+      status.textContent = q
+        ? `${filtered.length} right${filtered.length === 1 ? '' : 's'} matching “${input.value.trim()}” (${filtered.reduce((s, r) => s + r.rate, 0).toFixed(2)} cfs)`
+        : ''
+    }
+    if (note) {
+      note.textContent = rendered.truncated ? `Showing top 200 of ${filtered.length}. CSV follows the filter.` : ''
+    }
   })
 }
