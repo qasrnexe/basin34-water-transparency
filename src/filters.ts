@@ -71,11 +71,16 @@ export function podOwnerMatch(rec: PodRecord, state: AppState): boolean {
 }
 
 export function podVisible(rec: PodRecord, state: AppState, store: DataStore): boolean {
-  // Force-includes: selection, owner match, and analysis-view matches stay
-  // visible regardless of the base filters so investigations aren't cut short.
+  // Force-includes: selection and owner match stay visible.
   if (state.selectedWRs.has(rec.wr)) return true
   if (podOwnerMatch(rec, state)) return true
-  if (state.highlightMode !== 'none' && podMatchesMode(rec, state, store)) return true
+
+  const modeMatch = state.highlightMode !== 'none' && podMatchesMode(rec, state, store)
+  if (modeMatch) return true
+
+  // Phone / story lite: when an analysis lens is on, do not paint thousands of
+  // dimmed non-matches — they dominate CPU and make the map feel broken.
+  if (state.hideNonMatches && state.highlightMode !== 'none') return false
 
   // Base filters
   const catOk = rec.isGW ? state.showGW
@@ -92,11 +97,17 @@ export function wellVisible(rec: WellRecord, state: AppState, store: DataStore):
   if (state.focusIrrigation) {
     if (!rec.use || rec.use.includes('DOMESTIC') || rec.use.includes('MONITOR')) return false
   }
+
+  const analysisMatch =
+    (state.highlightMode === 'junior-dev' &&
+      rec.year != null && rec.year >= 1980 && rec.rate > state.highRateThreshold) ||
+    wellMatchesConjunctive(rec, state)
+
+  if (state.hideNonMatches && state.highlightMode !== 'none') {
+    return analysisMatch
+  }
+
   if (rec.year != null) {
-    const analysisMatch =
-      (state.highlightMode === 'junior-dev' &&
-        rec.year >= 1980 && rec.rate > state.highRateThreshold) ||
-      wellMatchesConjunctive(rec, state)
     if (!analysisMatch && (!inYearRange(rec.year, state) || !inEraBuckets(rec.year, state))) {
       return false
     }

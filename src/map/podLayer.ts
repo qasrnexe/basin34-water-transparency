@@ -45,14 +45,25 @@ export class PodLayer {
   private store: DataStore
   private onPodClick: (rec: PodRecord) => void
 
-  constructor(map: L.Map, store: DataStore, onPodClick: (rec: PodRecord) => void) {
+  constructor(
+    map: L.Map,
+    store: DataStore,
+    onPodClick: (rec: PodRecord) => void,
+    opts: { lite?: boolean } = {},
+  ) {
     this.map = map
     this.store = store
     this.onPodClick = onPodClick
+    const lite = !!opts.lite
     this.cluster = L.markerClusterGroup({
-      disableClusteringAtZoom: 11,
+      // Keep clusters longer on phones; unclustering 7k DivIcons kills scroll FPS.
+      disableClusteringAtZoom: lite ? 14 : 11,
       spiderfyOnMaxZoom: true,
-      maxClusterRadius: 45,
+      maxClusterRadius: lite ? 90 : 45,
+      chunkedLoading: true,
+      chunkInterval: lite ? 100 : 200,
+      chunkDelay: 20,
+      removeOutsideVisibleBounds: true,
       iconCreateFunction: clusterIcon,
     })
   }

@@ -15,6 +15,7 @@ export function defaultState(): AppState {
     ownerHighlight: null,
     reachFilter: '',
     placeOfUseMode: true,
+    hideNonMatches: false,
     selectedWRs: new Set<string>(),
     flowEra: 'historical',
   }

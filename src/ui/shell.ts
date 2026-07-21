@@ -31,11 +31,13 @@ export function renderShell() {
             <p class="story-body" id="story-body">
               Water District 34 covers the Big Lost River. This viewer uses public IDWR and USGS data so anyone can see how priority, place, and measured flow fit together — especially on the lower river near Arco.
             </p>
+            <p class="story-perf-hint">Early steps show the river &amp; gages only — rights appear when the story needs them, so phones stay usable.</p>
             <div class="story-nav">
               <button type="button" id="story-prev" class="story-nav-btn" disabled>← Back</button>
               <span id="story-step-counter" class="story-step-counter">1 / 7</span>
               <button type="button" id="story-next" class="story-nav-btn">Next →</button>
             </div>
+            <button type="button" id="story-panel-btn" class="story-panel-btn hidden">Open details</button>
             <div id="story-dots" class="story-dots" aria-label="Story steps"></div>
             <button type="button" id="story-restart" class="story-restart">Restart story</button>
           </div>

@@ -77,6 +77,11 @@ export interface AppState {
   ownerHighlight: string | null
   reachFilter: string
   placeOfUseMode: boolean
+  /**
+   * When an analysis view is active, hide non-matching PODs instead of drawing
+   * thousands of dimmed markers (critical on phones).
+   */
+  hideNonMatches: boolean
   /** Rights selected by clicking a POD or POU polygon. */
   selectedWRs: Set<string>
   flowEra: FlowEra

@@ -6,6 +6,7 @@ import L from 'leaflet'
 
 import { loadDataStoreLight, enrichDataStoreWithPou, pouGeomKey, type DataStore } from './data'
 import { applyHashToState, schedulePermalinkUpdate, setStoryStepForHash } from './permalink'
+import { preferLiteMap } from './perf'
 import { state, resetState } from './state'
 import type { Basemap, GeoFeature, PodRecord } from './types'
 import { BasemapControl, createMap } from './map/createMap'
@@ -175,7 +176,17 @@ function hideLoadOverlay() {
 async function bootstrap() {
   renderShell()
   void loadDataAsOf()
-  setLoadStatus('Building map…', 8)
+  const lite = preferLiteMap()
+  if (lite) {
+    // Phones: fewer polygons + hide dimmed markers. Story starts with channel/gages only.
+    state.placeOfUseMode = false
+    state.hideNonMatches = true
+    document.body.classList.add('lite-map')
+  } else {
+    // Desktop Story also hides non-matches so analysis steps stay snappy.
+    state.hideNonMatches = true
+  }
+  setLoadStatus(lite ? 'Phone-friendly load…' : 'Building map…', 8)
 
   map = createMap()
   basemap = new BasemapControl(map)
@@ -192,15 +203,22 @@ async function bootstrap() {
   }
   if (restored.storyStep != null) setStoryStepIndex(restored.storyStep)
 
-  setLoadStatus('Loading water rights & wells…', 20)
+  setLoadStatus('Loading water rights…', 20)
   store = await loadDataStoreLight(label => setLoadStatus(label, 35))
 
   setLoadStatus('Drawing channels & gages…', 50)
-  podLayer = new PodLayer(map, store, onPodClick)
+  podLayer = new PodLayer(map, store, onPodClick, { lite })
   wellLayer = new WellLayer(map, store, rec => showWellDetails(rec))
   pouLayer = new PouLayer(map, store, onPouClick)
   diversionLayer = new DiversionLayer(map, store, d => showDiversionDetails(d, store))
   diversionLayer.setEnabled(true)
+
+  // Story-first / phone: don't paint 7k POD markers or wells until a step needs them.
+  if (lite || restored.storyStep == null) {
+    podLayer.setEnabled(false)
+    wellLayer.setEnabled(false)
+  }
+
   staticLayers = await loadStaticLayers(map, store.reaches, {
     onFeatureClick: (feature, group) =>
       group === 'gages' ? showGageDetails(feature) : showGenericDetails(feature, group),
@@ -212,6 +230,11 @@ async function bootstrap() {
     },
   }, { deferHeavy: true })
   staticLayers.setFlowEra(state.flowEra)
+
+  const syncLayerCheckbox = (id: string, on: boolean) => {
+    const el = document.getElementById(id) as HTMLInputElement | null
+    if (el) el.checked = on
+  }
 
   populateReachSelect(store)
   wireSidebar({
@@ -253,7 +276,16 @@ async function bootstrap() {
       else if (mode === 'conjunctive') showConjunctivePanel(store)
     },
     onUiMode: mode => {
-      if (mode === 'explore') void staticLayers.loadHeavy()
+      state.hideNonMatches = lite || mode === 'story'
+      if (mode === 'explore') {
+        void staticLayers.loadHeavy()
+        // Explore on phone still keeps hideNonMatches; turn PODs on if Story had them off.
+        if (!podLayer.enabled) {
+          podLayer.setEnabled(true)
+          syncLayerCheckbox('layer-pods', true)
+        }
+        refreshData()
+      }
       requestAnimationFrame(() => map.invalidateSize())
     },
     onSheetChange: () => {
@@ -274,6 +306,10 @@ async function bootstrap() {
     resetAll: () => {
       if (timeline.isOpen()) timeline.close()
       resetState()
+      if (lite) {
+        state.placeOfUseMode = false
+        state.hideNonMatches = true
+      }
       syncSidebarToState()
       clearOwnerSearchUI()
       closeDetails()
@@ -281,11 +317,22 @@ async function bootstrap() {
     },
   })
   syncSidebarToState()
+  syncLayerCheckbox('layer-pods', podLayer.enabled)
+  syncLayerCheckbox('layer-wells', wellLayer.enabled)
+  syncLayerCheckbox('place-of-use-mode', state.placeOfUseMode)
 
   wireStory({
     refreshData,
     setFlowEra: era => staticLayers.setFlowEra(era),
     setView: (lat, lon, zoom) => map.setView([lat, lon], zoom),
+    setPodsEnabled: on => {
+      podLayer.setEnabled(on)
+      syncLayerCheckbox('layer-pods', on)
+    },
+    setWellsEnabled: on => {
+      wellLayer.setEnabled(on)
+      syncLayerCheckbox('layer-wells', on)
+    },
     showRiverShrink: () => showReachLossPanel(),
     showDryReach: () => showDryReachSeniorsPanel(store),
     showTransfers: () => showTransfersOverview(store),
@@ -300,6 +347,10 @@ async function bootstrap() {
     onSelect: owner => {
       state.ownerHighlight = owner
       state.selectedWRs = new Set()
+      if (!podLayer.enabled) {
+        podLayer.setEnabled(true)
+        syncLayerCheckbox('layer-pods', true)
+      }
       refreshData()
     },
     onClear: () => {
@@ -342,23 +393,24 @@ async function bootstrap() {
 
   map.on('moveend', updatePermalink)
 
+  // First paint: channel + gages (and no 7k stars yet on Story/phone).
   refreshData()
-  setLoadStatus('Map ready — loading fields in background…', 70)
+  setLoadStatus(lite ? 'Map ready — Story stays light on purpose' : 'Map ready — loading fields in background…', 70)
   hideLoadOverlay()
   requestAnimationFrame(() => map.invalidateSize())
 
-  // Restore guided story step from the share link (after layers exist)
-  if (restored.storyStep != null) {
-    goToStoryStep(restored.storyStep, { openPanel: true })
-  }
+  // Align map layers with the current Story step (pods off until an analysis step).
+  // Never auto-open panels on cold load — that traps phones behind a modal.
+  goToStoryStep(restored.storyStep ?? 0, { openPanel: false })
 
-  // Stage 3: POU + deferred heavy static layers (canals / NWI)
+  // Stage 3: enrich POU in background; only paint polygons if the user asked.
+  // Skip auto canals/NWI on phone — Explore / layer toggles pull them in.
   void (async () => {
     try {
       await enrichDataStoreWithPou(store, label => setLoadStatus(label, 85))
-      pouLayer.setVisibleWRs(podLayer.visibleWRs())
-      await staticLayers.loadHeavy()
-      setLoadStatus('All layers loaded', 100)
+      if (state.placeOfUseMode) pouLayer.setVisibleWRs(podLayer.visibleWRs())
+      if (!lite) await staticLayers.loadHeavy()
+      setLoadStatus('Background data ready', 100)
     } catch (err) {
       console.error('Background layer load failed', err)
       setLoadStatus('Some layers failed to load', 100)
@@ -371,7 +423,7 @@ async function bootstrap() {
   else if (state.highlightMode === 'conjunctive') showConjunctivePanel(store)
 
   // Debug handle
-  ;(window as any).__basin34 = { map, store, state }
+  ;(window as any).__basin34 = { map, store, state, lite, podLayer, wellLayer, pouLayer, goToStoryStep }
 }
 
 bootstrap()

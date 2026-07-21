@@ -29,7 +29,12 @@ export function updateLegend(counts: LegendCounts, layersOn: { pods: boolean; we
   const rows: string[] = []
 
   if (state.highlightMode !== 'none') {
-    rows.push(`<div class="lg-row lg-mode">${MODE_LEGEND[state.highlightMode] || ''}</div>`)
+    const modeText = MODE_LEGEND[state.highlightMode] || ''
+    rows.push(`<div class="lg-row lg-mode">${
+      state.hideNonMatches
+        ? modeText.replace(/Others dimmed\./g, 'Only matching rights shown (phone-friendly).')
+        : modeText
+    }</div>`)
   }
   if (state.ownerHighlight) {
     rows.push(`<div class="lg-row">${star(EMPHASIS_COLORS.owner.stroke)} Rights owned by “${state.ownerHighlight}”. Others dimmed.</div>`)

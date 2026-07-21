@@ -13,6 +13,10 @@ export interface StoryStep {
   highlightMode?: HighlightMode
   /** Optional panel to open after map state applies. */
   panel?: 'river-shrink' | 'dry-reach' | 'transfers' | 'conjunctive' | null
+  /** Paint POD markers for this step (default: only when an analysis lens is on). */
+  showPods?: boolean
+  /** Paint wells for this step (default: false — wells are heavy on phones). */
+  showWells?: boolean
 }
 
 /**
@@ -30,6 +34,8 @@ export const STORY_STEPS: StoryStep[] = [
     flowEra: 'historical',
     highlightMode: 'none',
     panel: null,
+    showPods: false,
+    showWells: false,
   },
   {
     id: 'then-now',
@@ -41,6 +47,8 @@ export const STORY_STEPS: StoryStep[] = [
     flowEra: 'recent',
     highlightMode: 'none',
     panel: null,
+    showPods: false,
+    showWells: false,
   },
   {
     id: 'river-shrink',
@@ -52,6 +60,8 @@ export const STORY_STEPS: StoryStep[] = [
     flowEra: 'recent',
     highlightMode: 'none',
     panel: 'river-shrink',
+    showPods: false,
+    showWells: false,
   },
   {
     id: 'dry-reach',
@@ -63,6 +73,8 @@ export const STORY_STEPS: StoryStep[] = [
     flowEra: 'recent',
     highlightMode: 'senior-downstream',
     panel: 'dry-reach',
+    showPods: true,
+    showWells: false,
   },
   {
     id: 'gw-boom',
@@ -74,6 +86,8 @@ export const STORY_STEPS: StoryStep[] = [
     flowEra: 'recent',
     highlightMode: 'conjunctive',
     panel: 'conjunctive',
+    showPods: true,
+    showWells: true,
   },
   {
     id: 'transfers',
@@ -85,6 +99,8 @@ export const STORY_STEPS: StoryStep[] = [
     flowEra: 'historical',
     highlightMode: 'transfers',
     panel: 'transfers',
+    showPods: true,
+    showWells: false,
   },
   {
     id: 'arco',
@@ -96,6 +112,8 @@ export const STORY_STEPS: StoryStep[] = [
     flowEra: 'recent',
     highlightMode: 'senior-downstream',
     panel: null,
+    showPods: true,
+    showWells: false,
   },
 ]
 
@@ -103,6 +121,8 @@ export interface StoryCallbacks {
   refreshData: () => void
   setFlowEra: (era: FlowEra) => void
   setView: (lat: number, lon: number, zoom: number) => void
+  setPodsEnabled: (on: boolean) => void
+  setWellsEnabled: (on: boolean) => void
   showRiverShrink: () => void
   showDryReach: () => void
   showTransfers: () => void
@@ -122,6 +142,13 @@ export function setStoryStepIndex(i: number) {
   currentIndex = Math.max(0, Math.min(STORY_STEPS.length - 1, i))
 }
 
+const PANEL_BTN_LABEL: Record<string, string> = {
+  'river-shrink': 'Open Mackay → Moore → Arco chart',
+  'dry-reach': 'Open seniors table + CSV',
+  transfers: 'Open transfers overview',
+  conjunctive: 'Open GW vs seniors overview',
+}
+
 function renderStepChrome(index: number) {
   const step = STORY_STEPS[index]
   const kicker = document.getElementById('story-kicker')
@@ -131,6 +158,7 @@ function renderStepChrome(index: number) {
   const prev = document.getElementById('story-prev') as HTMLButtonElement | null
   const next = document.getElementById('story-next') as HTMLButtonElement | null
   const dots = document.getElementById('story-dots')
+  const panelBtn = document.getElementById('story-panel-btn') as HTMLButtonElement | null
 
   if (kicker) kicker.textContent = step.kicker
   if (title) title.textContent = step.title
@@ -146,12 +174,29 @@ function renderStepChrome(index: number) {
       `<button type="button" class="story-dot${i === index ? ' active' : ''}" data-story-step="${i}" aria-label="Go to step ${i + 1}"></button>`,
     ).join('')
   }
+  if (panelBtn) {
+    if (step.panel) {
+      panelBtn.classList.remove('hidden')
+      panelBtn.textContent = PANEL_BTN_LABEL[step.panel] || 'Open details'
+    } else {
+      panelBtn.classList.add('hidden')
+    }
+  }
+}
+
+function openStepPanel(step: StoryStep) {
+  if (!cbs || !step.panel) return
+  if (step.panel === 'river-shrink') cbs.showRiverShrink()
+  else if (step.panel === 'dry-reach') cbs.showDryReach()
+  else if (step.panel === 'transfers') cbs.showTransfers()
+  else if (step.panel === 'conjunctive') cbs.showConjunctive()
 }
 
 /** Apply map + caption for a story step. */
 export function goToStoryStep(index: number, options: { openPanel?: boolean } = {}) {
   if (!cbs) return
-  const openPanel = options.openPanel !== false
+  // Default: do not auto-open heavy modals (blocks phones + traps Story nav).
+  const openPanel = options.openPanel === true
   currentIndex = Math.max(0, Math.min(STORY_STEPS.length - 1, index))
   const step = STORY_STEPS[currentIndex]
 
@@ -165,6 +210,11 @@ export function goToStoryStep(index: number, options: { openPanel?: boolean } = 
   state.ownerHighlight = null
   state.selectedWRs = new Set()
 
+  const showPods = step.showPods ?? (step.highlightMode != null && step.highlightMode !== 'none')
+  const showWells = !!step.showWells
+  cbs.setPodsEnabled(showPods)
+  cbs.setWellsEnabled(showWells)
+
   syncSidebarToState()
   cbs.refreshData()
   renderStepChrome(currentIndex)
@@ -173,12 +223,7 @@ export function goToStoryStep(index: number, options: { openPanel?: boolean } = 
     cbs.setView(step.view.lat, step.view.lon, step.view.zoom)
   }
 
-  if (openPanel) {
-    if (step.panel === 'river-shrink') cbs.showRiverShrink()
-    else if (step.panel === 'dry-reach') cbs.showDryReach()
-    else if (step.panel === 'transfers') cbs.showTransfers()
-    else if (step.panel === 'conjunctive') cbs.showConjunctive()
-  }
+  if (openPanel) openStepPanel(step)
 
   cbs.onStepChange?.(currentIndex)
 }
@@ -201,5 +246,8 @@ export function wireStory(callbacks: StoryCallbacks) {
   })
   document.getElementById('story-restart')?.addEventListener('click', () => {
     goToStoryStep(0)
+  })
+  document.getElementById('story-panel-btn')?.addEventListener('click', () => {
+    openStepPanel(STORY_STEPS[currentIndex])
   })
 }

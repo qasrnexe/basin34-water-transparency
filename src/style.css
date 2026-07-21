@@ -167,6 +167,29 @@ header .subtitle {
 }
 .story-muted { color: var(--text-muted); margin-bottom: 0; }
 
+.story-perf-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.story-panel-btn {
+  display: block;
+  width: 100%;
+  margin-top: 0.55rem;
+  min-height: 40px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  color: var(--accent-dark);
+  cursor: pointer;
+}
+.story-panel-btn.hidden { display: none !important; }
+.story-panel-btn:hover { background: color-mix(in srgb, var(--accent) 22%, var(--panel)); }
+
 .story-nav {
   display: flex;
   align-items: center;
@@ -729,8 +752,13 @@ main {
   body.sheet-collapsed #sidebar #story-panel #basemap-switcher-story,
   body.sheet-collapsed #sidebar #story-panel #open-explore-btn,
   body.sheet-collapsed #sidebar #story-panel .story-restart,
+  body.sheet-collapsed #sidebar #story-panel .story-perf-hint,
   body.sheet-collapsed #sidebar #explore-panel {
     display: none !important;
+  }
+  /* Keep the optional panel CTA visible in the peek when a step has one */
+  body.sheet-collapsed #sidebar #story-panel .story-panel-btn:not(.hidden) {
+    display: block !important;
   }
 
   body.sheet-collapsed #sidebar .story-body {
