@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"name":"Big Lost River Basin / WD34 (seed proxy - HUC 17040218 + plan bbox)","source":"WBD HUC 17040218 (USGS) + approximate per IDWR Big Lost project maps","asOf":"seed"},"geometry":{"type":"Polygon","coordinates":[[[-114.25,43.45],[-114.25,44.05],[-113.05,44.05],[-113.05,43.45],[-114.25,43.45]]]}}]}

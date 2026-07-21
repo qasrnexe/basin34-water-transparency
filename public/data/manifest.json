@@ -1,0 +1,73 @@
+{
+  "version": "phase0-real-extracts",
+  "generated": "2026-06-09",
+  "notes": "Real filtered extracts from IDWR public services. See _source inside each GeoJSON and the ETL README for full details. Replace/re-run as data updates. Keep neutral - no added interpretation.",
+  "layers": {
+    "wd34-pods": {
+      "source": "https://gis.idwr.idaho.gov/hosting/rest/services/Allocation/WaterRightPods/FeatureServer/0 (filtered BasinNumber=34 OR WaterDistrictNumber='34')",
+      "asOf": "2026-06-09",
+      "count": 7066,
+      "description": "Water rights Points of Diversion (PODs) for Water District 34 / Basin 34. Key fields: WaterRightNumber, Status, PriorityDate, Owner, OverallMaxDiversionRate, Source, DiversionType, etc. Includes links where available (WRReport)."
+    },
+    "wd34-wells": {
+      "source": "https://gis.idwr.idaho.gov/hosting/rest/services/Groundwater/Wells/FeatureServer/0 (filtered BasinNumber=34 OR CountyName Butte/Custer)",
+      "asOf": "2026-06-09",
+      "count": 4304,
+      "description": "Well locations and basic construction/use data for the basin. Key fields: WellID, Owner, WellUse, TotalDepth, StaticWaterLevel, ProductionRate, CountyName, etc. MetalTagNumber links to some PODs."
+    },
+    "wd34-pou": {
+      "source": "https://gis.idwr.idaho.gov/hosting/rest/services/allocation/WaterRightPous/FeatureServer/0 (filtered BasinNumber=34)",
+      "asOf": "2026-06-09",
+      "count": 5786,
+      "description": "Place of Use (POU) polygons for water rights in Basin 34. Linked to PODs/rights via WaterRightNumber. Includes TotalAcres. Rendered for all visible rights in the app; district-scale service areas (>=20 km2) draw as outlines only."
+    },
+    "gages": {
+      "source": "USGS NWIS site service (dec_lat_va/dec_long_va) + IDWR 2024 Big Lost Groundwater Update (Table 1 periods of record)",
+      "asOf": "2026-06-09",
+      "count": 9,
+      "description": "Key gages: Mackay, Leslie, Moore, below Moore div (then/now split), Arco, sinks limb (13132565, 13132535, 13132580). Coordinates from USGS NWIS."
+    },
+    "flowExtentIndicators": {
+      "source": "Derived from NHD mainstem + public gage flow presence summaries (NWIS + published averages in IDWR/USGS reports)",
+      "asOf": "2026-06-09",
+      "count": 2,
+      "description": "Approximate downstream extent proxies for historical vs recent reference periods. Strictly gage-record based; see details panel and links."
+    },
+    "nhd-canals-pipelines": {
+      "source": "USGS NHD High Resolution flowlines (canal/ditch/pipeline fcodes), HUC 17040218 via hydro.nationalmap.gov",
+      "asOf": "2026-06-09",
+      "count": 718,
+      "description": "Canal/ditch segments (dashed) and pipelines (dotted) for the basin, named where NHD provides GNIS names."
+    },
+    "wd34-admin-reaches": {
+      "source": "WD34 administrative reach approximations (manually digitized from WD34 accounting context)",
+      "asOf": "2026-06-09",
+      "count": 6,
+      "description": "Admin reach lines used for the at/downstream reach focus filter."
+    },
+    "basin-boundary": {
+      "source": "WBD HUC 17040218 (Big Lost) boundary",
+      "asOf": "2026-06-09",
+      "count": 1,
+      "description": "Basin outline for context."
+    },
+    "nwi-riparian": {
+      "source": "https://fwsprimary.wim.usgs.gov/server/rest/services/Riparian/MapServer/0 (basin bbox, centroid-clipped to WBD boundary)",
+      "asOf": "2026-06-09",
+      "count": 1128,
+      "description": "USFWS National Wetlands Inventory riparian polygons (forested / scrub-shrub / emergent) — the natural riparian corridor of the Big Lost River down to the sinks near Howe."
+    },
+    "nhd-mainstem": {
+      "source": "https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer layer 6 (gnis_name='Big Lost River'; derived reach split at Moore diversion USGS 13132100)",
+      "asOf": "2026-06-09",
+      "count": 348,
+      "description": "Real NHD channel geometry of the Big Lost River, tagged above/below Moore diversion for the historical-vs-recent flow visualization."
+    },
+    "nhd-sinks": {
+      "source": "https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer layer 12 (fcode 36100 playa / 46600 swamp-marsh, lower basin bbox)",
+      "asOf": "2026-06-09",
+      "count": 50,
+      "description": "Big Lost River sinks complex near Howe (NHD playa/marsh polygons) — the river's historic terminus."
+    }
+  }
+}

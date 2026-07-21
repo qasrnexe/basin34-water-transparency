@@ -1,0 +1,119 @@
+{
+  "type": "FeatureCollection",
+  "name": "key-gages-big-lost-wd34",
+  "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+  "_source": {
+    "service": "https://waterservices.usgs.gov/nwis/site/",
+    "note": "Coordinates from USGS NWIS site service (dec_lat_va / dec_long_va). Verify on USGS monitoring pages."
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "site_no": "13120000",
+        "name": "NF Big Lost River at Wild Horse NR Chilly ID",
+        "type": "USGS stream",
+        "url": "https://waterdata.usgs.gov/monitoring-location/13120000/",
+        "notes": "Upper North Fork tributary context.",
+        "historical_summary": "Headwaters contribution to the basin."
+      },
+      "geometry": { "type": "Point", "coordinates": [-114.11388889, 43.93277778] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "site_no": "13127000",
+        "name": "Big Lost River BL Mackay Res NR Mackay ID",
+        "type": "USGS stream",
+        "url": "https://waterdata.usgs.gov/monitoring-location/13127000/",
+        "notes": "Primary gage below Mackay Reservoir. Major context for basin yield and the Mackay→downstream shrink chart.",
+        "historical_summary": "Long record; key reference for upper/mid basin flow entering the lower valley."
+      },
+      "geometry": { "type": "Point", "coordinates": [-113.6483333, 43.93916667] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "site_no": "13130500",
+        "name": "Big Lost River at Leslie ID",
+        "type": "USGS stream",
+        "url": "https://waterdata.usgs.gov/monitoring-location/13130500/",
+        "notes": "Mid-basin gage at Leslie (WD34 accounting reach). NWIS publishes only a single early annual-stat year — use Mackay→Moore→Arco step-down for the long record.",
+        "historical_summary": "WD34 admin reach boundary; flow here is what remains after upper-valley diversions."
+      },
+      "geometry": { "type": "Point", "coordinates": [-113.4566667, 43.8586111] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "site_no": "13132000",
+        "name": "Big Lost River NR Moore ID",
+        "type": "USGS stream",
+        "url": "https://waterdata.usgs.gov/monitoring-location/13132000/",
+        "notes": "At Moore — the practical lower limit of reliable surface flow in most recent years per WD34 accounting and IDWR/USGS reports.",
+        "historical_summary": "The 'now' story anchor: surface flow commonly terminates near Moore in dry years, long before Arco or the sinks."
+      },
+      "geometry": { "type": "Point", "coordinates": [-113.35945, 43.78683056] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "site_no": "13132100",
+        "name": "Big Lost River Below Moore Div NR Moore ID",
+        "type": "USGS stream",
+        "url": "https://waterdata.usgs.gov/monitoring-location/13132100/",
+        "notes": "Immediately below the Moore diversion — the split point used for the 'then vs now' channel styling on the map.",
+        "historical_summary": "WD34 Moore Diversion accounting point. The channel below this gage (toward Arco and the sinks) is the reach that has largely gone dry."
+      },
+      "geometry": { "type": "Point", "coordinates": [-113.3608889, 43.7843611] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "site_no": "13132500",
+        "name": "Big Lost River NR Arco ID",
+        "type": "USGS stream",
+        "url": "https://waterdata.usgs.gov/monitoring-location/13132500/",
+        "notes": "CRITICAL extent indicator. Record since 1946. Published averages: ~54k AF/yr (1944–68) vs ~17k AF/yr (2000–19). Zero or near-zero annual mean in many recent years (2021, 2022, 2025 = 0.0 cfs).",
+        "historical_summary": "Flow rarely reaches Arco anymore — when it does register here, it is a fraction of historical volumes. Many years the annual mean is literally zero."
+      },
+      "geometry": { "type": "Point", "coordinates": [-113.2705556, 43.5822222] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "site_no": "13132535",
+        "name": "Big Lost R at Lincoln Blvd Bridge NR Atomic City ID",
+        "type": "USGS stream",
+        "url": "https://waterdata.usgs.gov/monitoring-location/13132535/",
+        "notes": "Lower basin gage on the sinks limb (1984+). Record ends 2018 — gage discontinued.",
+        "historical_summary": "When positive flow was recorded here, surface water had continued past Arco toward the sinks area."
+      },
+      "geometry": { "type": "Point", "coordinates": [-112.9421167, 43.57440278] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "site_no": "13132565",
+        "name": "Big Lost River AB Big Lost River Sinks NR Howe ID",
+        "type": "USGS stream",
+        "url": "https://waterdata.usgs.gov/monitoring-location/13132565/",
+        "notes": "Above the terminal sinks near Howe — downstream-most in the network. Record ends 2018 — gage discontinued. On the eastern sinks limb, not near Arco.",
+        "historical_summary": "When positive flow was recorded here, surface water had reached the Big Lost River Sinks area — the river's historic terminus."
+      },
+      "geometry": { "type": "Point", "coordinates": [-112.875, 43.7233333] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "site_no": "13132580",
+        "name": "Big Lost River BL Playa No.1 NR Howe ID",
+        "type": "USGS stream",
+        "url": "https://waterdata.usgs.gov/monitoring-location/13132580/",
+        "notes": "At the sinks playa near Howe. NWIS has no discharge statistics for this site in the public API — context gage only; see 13132565 (above sinks) for the flow record on this reach.",
+        "historical_summary": "Terminal playa gage; positive flow here means water reached the sinks complex."
+      },
+      "geometry": { "type": "Point", "coordinates": [-112.8502748, 43.7965727] }
+    }
+  ]
+}
