@@ -1,4 +1,4 @@
-/** Static app shell. Control wiring lives in sidebar.ts. */
+/** Static app shell. Control wiring lives in sidebar.ts / story.ts (Guide). */
 export function renderShell() {
   const app = document.querySelector<HTMLDivElement>('#app')!
   app.innerHTML = `
@@ -9,10 +9,7 @@ export function renderShell() {
         <div id="data-as-of" class="data-as-of">Loading data date…</div>
       </div>
       <div class="header-actions">
-        <div id="mode-toggle" class="mode-toggle" role="group" aria-label="App mode">
-          <button type="button" id="mode-story" class="mode-btn active" data-mode="story">Story</button>
-          <button type="button" id="mode-explore" class="mode-btn" data-mode="explore">Explore</button>
-        </div>
+        <button type="button" id="guide-start-btn" class="header-btn" title="Walk the three receipts on the map">Walk the receipts</button>
         <button id="share-btn" class="header-btn" title="Copy a link to the current view">Share view</button>
         <button id="info-btn" class="header-btn">About</button>
       </div>
@@ -22,55 +19,26 @@ export function renderShell() {
       <aside id="sidebar">
         <button type="button" id="sheet-handle" class="sheet-handle" aria-expanded="false" aria-controls="sidebar" title="Expand or collapse panel">
           <span class="sheet-handle-bar" aria-hidden="true"></span>
-          <span class="sheet-handle-label">Story &amp; tools</span>
+          <span class="sheet-handle-label">Tools</span>
         </button>
-        <section id="story-panel" class="mode-panel">
-          <div class="story-card">
-            <p class="story-kicker" id="story-kicker">Step 1 · Basin</p>
-            <h2 class="story-title" id="story-title">A river that runs dry — and rights that remain</h2>
-            <p class="story-body" id="story-body">
-              Water District 34 covers the Big Lost River. This viewer uses public IDWR and USGS data so anyone can see how priority, place, and measured flow fit together — especially on the lower river near Arco.
-            </p>
-            <p class="story-perf-hint">Tap a ★ on the map anytime — purple lines show where that right diverts and where it can be used.</p>
-            <div class="story-nav">
-              <button type="button" id="story-prev" class="story-nav-btn" disabled>← Back</button>
-              <span id="story-step-counter" class="story-step-counter">1 / 5</span>
-              <button type="button" id="story-next" class="story-nav-btn">Next →</button>
+
+        <section id="explore-panel" class="mode-panel">
+          <div id="guide-coach" class="guide-coach hidden" aria-live="polite">
+            <div class="guide-coach-top">
+              <p class="story-kicker" id="guide-kicker">Step 1</p>
+              <button type="button" id="guide-dismiss" class="guide-dismiss" title="Dismiss guide">✕</button>
             </div>
-            <button type="button" id="story-panel-btn" class="story-panel-btn hidden">Open details</button>
-            <div id="story-dots" class="story-dots" aria-label="Story steps"></div>
-            <button type="button" id="story-restart" class="story-restart">Restart story</button>
+            <h2 class="story-title" id="guide-title">Guide</h2>
+            <p class="story-body" id="guide-body"></p>
+            <div class="story-nav">
+              <button type="button" id="guide-prev" class="story-nav-btn" disabled>← Back</button>
+              <span id="guide-step-counter" class="story-step-counter">1 / 5</span>
+              <button type="button" id="guide-next" class="story-nav-btn">Next →</button>
+            </div>
+            <button type="button" id="guide-receipt-btn" class="story-panel-btn hidden">Open receipt</button>
+            <div id="guide-dots" class="story-dots" aria-label="Guide steps"></div>
           </div>
 
-          <h2>Jump to</h2>
-          <div class="preset-grid">
-            <button type="button" class="preset-btn" data-preset="dry-reach">Dry-reach seniors + CSV</button>
-            <button type="button" class="preset-btn" data-preset="river-shrink">River shrink</button>
-            <button type="button" class="preset-btn" data-preset="transfers">Water moved farther + CSV</button>
-            <button type="button" class="preset-btn" data-preset="then-now">Then vs now</button>
-            <button type="button" class="preset-btn" data-preset="senior">Senior downstream</button>
-            <button type="button" class="preset-btn" data-preset="conjunctive">GW boom vs seniors</button>
-          </div>
-
-          <h2>Then vs now</h2>
-          <div class="preset-grid era-presets">
-            <button type="button" class="preset-btn era-btn active" data-era="historical">Then — to the sinks</button>
-            <button type="button" class="preset-btn era-btn" data-era="recent">Now — dry below Moore</button>
-          </div>
-
-          <h2>Basemap</h2>
-          <div class="flex gap-1 mb-1" id="basemap-switcher-story">
-            <button type="button" class="basemap-btn" data-basemap="osm">Map</button>
-            <button type="button" class="basemap-btn active" data-basemap="satellite">Satellite</button>
-            <button type="button" class="basemap-btn" data-basemap="hybrid">Hybrid</button>
-          </div>
-
-          <button type="button" id="open-explore-btn" class="text-xs px-2 py-1 mt-2 w-full border border-[var(--border)] rounded hover:bg-[var(--border)]">
-            Open full Explore controls →
-          </button>
-        </section>
-
-        <section id="explore-panel" class="mode-panel hidden">
           <p class="explore-hint">Tap a ★ anytime for purple diversion↔field lines.</p>
 
           <h2>Owner search</h2>
@@ -107,7 +75,6 @@ export function renderShell() {
             <button type="button" id="dry-reach-btn" class="insight-btn">Downstream seniors + CSV</button>
             <button type="button" id="moved-farther-btn" class="insight-btn">Water moved farther + CSV</button>
             <button type="button" id="river-shrink-btn" class="insight-btn">River shrink chart</button>
-            <button type="button" id="conjunctive-btn" class="insight-btn">GW boom vs seniors</button>
           </div>
           <label class="block text-xs mt-2 mb-0.5">Map emphasis</label>
           <select id="highlight-mode" class="w-full text-xs border border-[var(--border)] rounded px-1 py-0.5 mb-1">
@@ -131,6 +98,7 @@ export function renderShell() {
           <details id="explore-advanced" class="explore-advanced">
             <summary>Advanced</summary>
             <div class="explore-advanced-body">
+              <button type="button" id="conjunctive-btn" class="insight-btn" style="width:100%;margin-bottom:0.35rem">GW boom vs seniors</button>
               <div class="text-xs mb-1">
                 High-rate threshold:
                 <input type="number" id="high-rate-threshold" value="5" style="width:44px;font-size:0.7rem"> cfs
@@ -219,7 +187,10 @@ export function renderShell() {
       </div>
 
       <aside id="details">
-        <button id="close-details" class="text-xs float-right">✕ Close</button>
+        <div class="details-header">
+          <span id="details-heading" class="details-heading">Inspector</span>
+          <button id="close-details" class="text-xs" type="button">✕ Close</button>
+        </div>
         <div id="details-content">
           <p class="text-[var(--text-muted)]">Click a POD ★, well ●, field (POU polygon), gage or reach for details and source links.</p>
         </div>
@@ -228,13 +199,6 @@ export function renderShell() {
 
     <div class="disclaimer">
       Sources: IDWR (PODs / Wells / POU), USGS NWIS, NHD, FWS NWI. Neutral public-data view only. Not legal advice.
-    </div>
-
-    <div id="modal-backdrop" class="hidden">
-      <div id="modal" role="dialog" aria-modal="true">
-        <button id="modal-close" title="Close (Esc)">✕</button>
-        <div id="modal-content"></div>
-      </div>
     </div>
 
     <div id="load-overlay">

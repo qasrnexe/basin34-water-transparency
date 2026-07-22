@@ -16,19 +16,18 @@ import { PouLayer } from './map/pouLayer'
 import { DiversionLayer } from './map/diversionLayer'
 import { loadStaticLayers, type StaticLayers } from './map/staticLayers'
 import { renderShell } from './ui/shell'
-import { wireSidebar, populateReachSelect, syncSidebarToState, syncReachSelect, loadDataAsOf, getStoredUiMode } from './ui/sidebar'
+import { wireSidebar, populateReachSelect, syncSidebarToState, syncReachSelect, loadDataAsOf } from './ui/sidebar'
 import { updateLegend } from './ui/legend'
 import { setupTimeline, type TimelineControl } from './ui/timeline'
 import { setupOwnerSearch, clearOwnerSearchUI } from './ui/ownerSearch'
-import { isModalOpen } from './ui/modal'
-import { goToStoryStep, setStoryStepIndex, wireStory } from './ui/story'
 import {
-  closeDetails, FLOW_STEP_GAGES, showAppropriationPanel, showConjunctivePanel, showConflictsOverview, showDiversionDetails, showDryReachSeniorsPanel, showGageDetails,
-  showGenericDetails, showPodDetails, showPouGroupDetails, showReachLossPanel, showTransfersOverview,
-  showWellDetails,
+  closeDetails, FLOW_STEP_GAGES, getReceiptReopen, isDetailsOpen, isDetailsPinned,
+  showAppropriationPanel, showConjunctivePanel, showConflictsOverview, showDiversionDetails,
+  showDryReachSeniorsPanel, showGageDetails, showGenericDetails, showPodDetails, showPouGroupDetails,
+  showReachLossPanel, showTransfersOverview, showWellDetails,
 } from './ui/details'
+import { dismissGuide, goToGuideStep, setGuideStepIndex, startGuide, wireGuide } from './ui/story'
 
-// Fix default marker icons for Leaflet in bundlers
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
@@ -58,9 +57,6 @@ function updatePermalink() {
 /** Selection forced filtered-out PODs into view → next change needs a rebuild. */
 let selectionForcedRebuild = false
 
-// ---------- Rendering ----------
-
-/** Full data refresh: filters changed → rebuild layers and legend. */
 function refreshData() {
   podLayer.rebuild()
   wellLayer.rebuild()
@@ -71,13 +67,10 @@ function refreshData() {
   updatePermalink()
 }
 
-/** Cheap selection refresh: restyle affected markers + POU overlay only. */
 function setSelection(wrs: Set<string>) {
   const affected = new Set([...state.selectedWRs, ...wrs])
   state.selectedWRs = wrs
 
-  // If the selection includes rights currently filtered out, force-include them
-  // (podVisible force-includes selected rights) via a one-off rebuild.
   const visible = podLayer.visibleWRs()
   const needsRebuild = selectionForcedRebuild || [...wrs].some(wr => !visible.has(wr))
   if (needsRebuild) {
@@ -96,7 +89,8 @@ function setSelection(wrs: Set<string>) {
 function clearSelection() {
   if (state.selectedWRs.size === 0) return
   setSelection(new Set())
-  closeDetails()
+  // Pinned receipts (CSV/charts) stay open so Zoom-from-table keeps context
+  if (!isDetailsPinned()) closeDetails()
 }
 
 function updateLegendNow() {
@@ -126,8 +120,6 @@ function updateSelectionBanner() {
   banner.classList.remove('hidden')
 }
 
-// ---------- Interactions ----------
-
 function onPodClick(rec: PodRecord) {
   setSelection(rec.wr ? new Set([rec.wr]) : new Set())
   showPodDetails(rec, store)
@@ -136,7 +128,6 @@ function onPodClick(rec: PodRecord) {
 function onPouClick(feature: GeoFeature) {
   const wr = (feature.properties?.WaterRightNumber || '').trim()
   if (!wr) return
-  // All rights sharing (approximately) this polygon are selected together
   const key = pouGeomKey(feature.geometry)
   const group = key && store.geomKeyToWRs.get(key)
   const wrs = group ? new Set(group) : new Set([wr])
@@ -153,6 +144,14 @@ function zoomToWR(wr: string) {
   if (bounds.isValid()) map.fitBounds(bounds.pad(0.3), { maxZoom: 14 })
 }
 
+/** Zoom + select + optional Back-to-list when coming from a receipt table. */
+function focusWRFromReceipt(wr: string) {
+  zoomToWR(wr)
+  setSelection(new Set([wr]))
+  const rec = store.podsByWR.get(wr)?.[0]
+  if (rec) showPodDetails(rec, store, { fromReceipt: !!getReceiptReopen() })
+}
+
 const GAGE_COORDS: Record<string, [number, number]> = {
   ...Object.fromEntries(Object.values(FLOW_STEP_GAGES).map(g => [g.site, [g.lat, g.lon]])),
   '13132580': [43.7965727, -112.8502748],
@@ -162,8 +161,6 @@ function zoomToGage(site: string) {
   const c = GAGE_COORDS[site]
   if (c) map.setView(c, 12)
 }
-
-// ---------- Bootstrap ----------
 
 function setLoadStatus(label: string, pct: number) {
   const status = document.getElementById('load-status')
@@ -181,7 +178,6 @@ async function bootstrap() {
   void loadDataAsOf()
   const lite = preferLiteMap()
   if (lite) {
-    // Phones: skip painting every POU fill (heavy). Selection purple lines still work.
     state.placeOfUseMode = false
     state.hideNonMatches = true
     document.body.classList.add('lite-map')
@@ -195,7 +191,6 @@ async function bootstrap() {
   basemap = new BasemapControl(map)
   basemap.set('satellite')
 
-  // Restore a shared view (URL hash) before the first render
   const restored = applyHashToState()
   if (restored.basemap) {
     currentBasemap = restored.basemap
@@ -204,7 +199,7 @@ async function bootstrap() {
   if (restored.view && restored.storyStep == null) {
     map.setView([restored.view.lat, restored.view.lng], restored.view.zoom)
   }
-  if (restored.storyStep != null) setStoryStepIndex(restored.storyStep)
+  if (restored.storyStep != null) setGuideStepIndex(restored.storyStep)
 
   setLoadStatus('Loading water rights…', 20)
   store = await loadDataStoreLight(label => setLoadStatus(label, 35))
@@ -215,7 +210,6 @@ async function bootstrap() {
   pouLayer = new PouLayer(map, store, onPouClick)
   diversionLayer = new DiversionLayer(map, store, d => showDiversionDetails(d, store))
   diversionLayer.setEnabled(true)
-  // Core map: POD stars on; wells stay off until Explore asks for them.
   podLayer.setEnabled(true)
   wellLayer.setEnabled(false)
 
@@ -246,6 +240,9 @@ async function bootstrap() {
       updateLegendNow()
     })
   }
+
+  // Desktop: pull heavy layers; phones wait for toggles / Guide
+  if (!lite) void staticLayers.loadHeavy()
 
   wireSidebar({
     refreshData,
@@ -280,24 +277,11 @@ async function bootstrap() {
       updatePermalink()
     },
     setFlowEra: era => staticLayers.setFlowEra(era),
+    // Map emphasis — primary receipts open via Insight buttons only.
+    // Conflict is Advanced-only and its ranked list is the point of that lens.
     onHighlightMode: mode => {
-      if (mode === 'transfers') {
-        ensureCanalsVisible()
-        showTransfersOverview(store)
-      } else if (mode === 'conflict') showConflictsOverview(store)
-      else if (mode === 'conjunctive') showConjunctivePanel(store)
-    },
-    onUiMode: mode => {
-      state.hideNonMatches = lite || mode === 'story'
-      if (mode === 'explore') {
-        void staticLayers.loadHeavy()
-        if (!podLayer.enabled) {
-          podLayer.setEnabled(true)
-          syncLayerCheckbox('layer-pods', true)
-        }
-        refreshData()
-      }
-      requestAnimationFrame(() => map.invalidateSize())
+      if (mode === 'transfers') ensureCanalsVisible()
+      if (mode === 'conflict') showConflictsOverview(store)
     },
     onSheetChange: () => {
       requestAnimationFrame(() => map.invalidateSize())
@@ -315,12 +299,9 @@ async function bootstrap() {
       state.selectedWRs = new Set()
       refreshData()
     },
-    focusArco: () => {
-      // USGS Arco gage vicinity — lower Big Lost
-      map.setView([43.635, -113.30], 11)
-    },
     resetAll: () => {
       if (timeline.isOpen()) timeline.close()
+      dismissGuide()
       resetState()
       if (lite) {
         state.placeOfUseMode = false
@@ -340,7 +321,7 @@ async function bootstrap() {
   syncLayerCheckbox('layer-wells', wellLayer.enabled)
   syncLayerCheckbox('place-of-use-mode', state.placeOfUseMode)
 
-  wireStory({
+  wireGuide({
     refreshData,
     setFlowEra: era => staticLayers.setFlowEra(era),
     setView: (lat, lon, zoom) => map.setView([lat, lon], zoom),
@@ -358,11 +339,13 @@ async function bootstrap() {
       ensureCanalsVisible()
       showTransfersOverview(store)
     },
-    showConjunctive: () => showConjunctivePanel(store),
     ensureCanalsVisible,
     onStepChange: i => {
       setStoryStepForHash(i)
       updatePermalink()
+    },
+    onGuideActiveChange: () => {
+      requestAnimationFrame(() => map.invalidateSize())
     },
   })
 
@@ -390,49 +373,50 @@ async function bootstrap() {
   })
   document.getElementById('timeline-btn')?.addEventListener('click', () => timeline.open())
 
-  // Selection clearing: banner button, Esc, map background click
   document.getElementById('selection-clear')?.addEventListener('click', clearSelection)
   document.addEventListener('keydown', e => {
-    // Esc closes the modal first (its own handler); only then clears selection
-    if (e.key === 'Escape' && !isModalOpen()) clearSelection()
+    if (e.key !== 'Escape') return
+    if (isDetailsOpen()) {
+      closeDetails()
+      return
+    }
+    clearSelection()
   })
   map.on('click', clearSelection)
 
-  // Details panel: close button + zoom-to-right buttons (event delegation)
   document.getElementById('close-details')?.addEventListener('click', closeDetails)
   document.getElementById('details-content')?.addEventListener('click', e => {
-    const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-zoom-wr]')
-    if (btn?.dataset.zoomWr) zoomToWR(btn.dataset.zoomWr)
+    const t = e.target as HTMLElement
+    if (t.closest('[data-back-receipt]')) {
+      getReceiptReopen()?.()
+      return
+    }
+    const btn = t.closest<HTMLElement>('[data-zoom-wr]')
+    if (btn?.dataset.zoomWr) {
+      if (getReceiptReopen()) focusWRFromReceipt(btn.dataset.zoomWr)
+      else zoomToWR(btn.dataset.zoomWr)
+    }
   })
-  // Gage / WR zoom + step-down chart buttons (modal, gage popups, channel popups)
   document.addEventListener('click', e => {
     const t = e.target as HTMLElement
     const gageBtn = t.closest<HTMLElement>('[data-zoom-gage]')
     if (gageBtn?.dataset.zoomGage) zoomToGage(gageBtn.dataset.zoomGage)
-    const wrBtn = t.closest<HTMLElement>('[data-zoom-wr]')
-    if (wrBtn?.dataset.zoomWr && wrBtn.closest('#modal-content')) zoomToWR(wrBtn.dataset.zoomWr)
     if (t.closest('[data-show-shrink]')) showReachLossPanel()
   })
 
   map.on('moveend', updatePermalink)
 
-  // First paint with POD stars available — purple field lines appear after POU loads.
   refreshData()
   setLoadStatus(lite ? 'Map ready — tap a ★ for purple field lines' : 'Map ready — loading fields in background…', 70)
   hideLoadOverlay()
   requestAnimationFrame(() => map.invalidateSize())
 
-  // Story only when the user is in Story mode (or a shared story step link).
-  const startInStory = getStoredUiMode() === 'story' || restored.storyStep != null
-  if (startInStory) {
-    goToStoryStep(restored.storyStep ?? 0, { openPanel: false })
+  if (restored.storyStep != null) {
+    startGuide(restored.storyStep)
   } else if (!restored.view) {
-    // Bird's-eye default: lower basin where the dry-reach story is legible.
     map.setView([43.70, -113.32], 10)
   }
 
-  // Stage 3: enrich POU in background; selection purple lines light up when ready.
-  // Skip auto canals/NWI on phone — Explore / layer toggles pull them in.
   void (async () => {
     try {
       await enrichDataStoreWithPou(store, label => setLoadStatus(label, 85))
@@ -446,13 +430,8 @@ async function bootstrap() {
     }
   })()
 
-  // A restored analysis view opens its overview panel like a user selection would
-  if (state.highlightMode === 'transfers') showTransfersOverview(store)
-  else if (state.highlightMode === 'conflict') showConflictsOverview(store)
-  else if (state.highlightMode === 'conjunctive') showConjunctivePanel(store)
-
   // Debug handle
-  ;(window as any).__basin34 = { map, store, state, lite, podLayer, wellLayer, pouLayer, goToStoryStep }
+  ;(window as any).__basin34 = { map, store, state, lite, podLayer, wellLayer, pouLayer, goToGuideStep, startGuide }
 }
 
 bootstrap()

@@ -2,35 +2,30 @@ import { state } from '../state'
 import type { FlowEra, HighlightMode } from '../types'
 import { syncSidebarToState } from './sidebar'
 
-export interface StoryStep {
+export interface GuideStep {
   id: string
   kicker: string
   title: string
   body: string
-  /** Map center [lat, lon] + zoom when entering the step. */
   view?: { lat: number; lon: number; zoom: number }
   flowEra?: FlowEra
   highlightMode?: HighlightMode
-  /** Optional panel to open after map state applies. */
-  panel?: 'river-shrink' | 'dry-reach' | 'transfers' | 'conjunctive' | null
-  /** Paint POD markers for this step (default: only when an analysis lens is on). */
+  panel?: 'river-shrink' | 'dry-reach' | 'transfers' | null
   showPods?: boolean
-  /** Paint wells for this step (default: false — wells are heavy on phones). */
   showWells?: boolean
 }
 
 /**
- * Geography-only guided story. No private surnames.
- * Three receipts: dry channel → seniors CSV → water moved farther CSV.
- * Order: overview → then/now → river shrink → dry-reach → moved farther.
+ * Geography-only guided walk. No private surnames.
+ * Thin coach inside Explore — not a second app mode.
  */
-export const STORY_STEPS: StoryStep[] = [
+export const GUIDE_STEPS: GuideStep[] = [
   {
     id: 'overview',
     kicker: 'Step 1 · Click a right',
     title: 'Every ★ is a point of diversion',
     body:
-      'Zoom in and tap a star. The details panel opens that water right, and purple dashed lines connect the diversion to its place-of-use fields. That link — where water is taken vs where it is used — is the heart of this map.',
+      'Zoom in and tap a star. The inspector opens that water right, and purple dashed lines connect the diversion to its place-of-use fields. That link — where water is taken vs where it is used — is the heart of this map.',
     view: { lat: 43.70, lon: -113.32, zoom: 11 },
     flowEra: 'recent',
     highlightMode: 'none',
@@ -43,7 +38,7 @@ export const STORY_STEPS: StoryStep[] = [
     kicker: 'Step 2 · Channel',
     title: 'Then the river reached the sinks. Now it often stops near Moore.',
     body:
-      'Switch the channel to “Now”: below the Moore diversion the mainstem is dashed brown. USGS records and district accounting show surface flow commonly ending long before Arco or the historic sinks near Howe. Tap a gage for current CFS when the site still reports.',
+      'Channel “Now” shows the mainstem dashed brown below Moore. USGS records show surface flow commonly ending long before Arco. Tap a gage for current CFS when the site still reports. Use Then vs now under Advanced to flip eras.',
     view: { lat: 43.72, lon: -113.28, zoom: 10 },
     flowEra: 'recent',
     highlightMode: 'none',
@@ -56,7 +51,7 @@ export const STORY_STEPS: StoryStep[] = [
     kicker: 'Step 3 · Gages',
     title: 'Mackay → Moore → Arco: where the water disappears',
     body:
-      'Annual flow at three mainstem gages shows the step-down. Most of the loss happens before Arco; the Arco gage often reads near zero in recent years. Open the chart for the full record.',
+      'Annual flow at three mainstem gages shows the step-down. Most of the loss happens before Arco. Open the receipt in the inspector for the full chart — the map stays visible.',
     view: { lat: 43.78, lon: -113.35, zoom: 10 },
     flowEra: 'recent',
     highlightMode: 'none',
@@ -69,7 +64,7 @@ export const STORY_STEPS: StoryStep[] = [
     kicker: 'Step 4 · Senior rights',
     title: 'Downstream seniors on a dry reach',
     body:
-      'Pre-1950 surface rights on the corridor at or below Moore sit where the channel often goes dry — including the lower river near Arco. The ranked table (and CSV) is a public-data proxy — not a legal finding. Zoom any row to its point of diversion. Groundwater expansion vs seniors lives in Explore.',
+      'Pre-1950 surface rights on the corridor at or below Moore sit where the channel often goes dry. Open the ranked table + CSV in the inspector. Zoom any row to paint purple diversion↔field lines on the map.',
     view: { lat: 43.65, lon: -113.30, zoom: 11 },
     flowEra: 'recent',
     highlightMode: 'senior-downstream',
@@ -82,7 +77,7 @@ export const STORY_STEPS: StoryStep[] = [
     kicker: 'Step 5 · Moved farther',
     title: 'Water moved farther from the river corridor',
     body:
-      'Some rights divert far from their authorized place of use; orange fills mark POUs off the natural corridor. That is a geometric proxy from IDWR layers — not a transfer filing, not a liner inventory, and not a count of canals built in the last decade. On satellite, look for lined canals carrying water east or west of the river onto newer ground. Open the table + CSV for the ranked list.',
+      'Some rights divert far from their authorized place of use; orange fills mark POUs off the natural corridor — a geometric proxy, not a liner inventory. On satellite, look for lined canals east or west of the river. Open the table + CSV in the inspector.',
     view: { lat: 43.85, lon: -113.45, zoom: 9 },
     flowEra: 'historical',
     highlightMode: 'transfers',
@@ -92,7 +87,10 @@ export const STORY_STEPS: StoryStep[] = [
   },
 ]
 
-export interface StoryCallbacks {
+/** @deprecated Use GUIDE_STEPS */
+export const STORY_STEPS = GUIDE_STEPS
+
+export interface GuideCallbacks {
   refreshData: () => void
   setFlowEra: (era: FlowEra) => void
   setView: (lat: number, lon: number, zoom: number) => void
@@ -101,81 +99,102 @@ export interface StoryCallbacks {
   showRiverShrink: () => void
   showDryReach: () => void
   showTransfers: () => void
-  showConjunctive: () => void
-  /** Persist story step in the URL hash. */
-  onStepChange?: (index: number) => void
-  /** Ensure NHD canals are visible (moved-farther step). */
+  onStepChange?: (index: number | null) => void
   ensureCanalsVisible?: () => void
+  onGuideActiveChange?: (active: boolean) => void
 }
 
 let currentIndex = 0
-let cbs: StoryCallbacks | null = null
+let guideActive = false
+let cbs: GuideCallbacks | null = null
 
-export function getStoryStepIndex(): number {
+export function isGuideActive(): boolean {
+  return guideActive
+}
+
+export function getGuideStepIndex(): number {
   return currentIndex
 }
 
-export function setStoryStepIndex(i: number) {
-  currentIndex = Math.max(0, Math.min(STORY_STEPS.length - 1, i))
+/** @deprecated */
+export function getStoryStepIndex(): number {
+  return getGuideStepIndex()
 }
 
-const PANEL_BTN_LABEL: Record<string, string> = {
-  'river-shrink': 'Open Mackay → Moore → Arco chart',
+export function setGuideStepIndex(i: number) {
+  currentIndex = Math.max(0, Math.min(GUIDE_STEPS.length - 1, i))
+}
+
+/** @deprecated */
+export function setStoryStepIndex(i: number) {
+  setGuideStepIndex(i)
+}
+
+const RECEIPT_BTN_LABEL: Record<string, string> = {
+  'river-shrink': 'Open river-shrink chart',
   'dry-reach': 'Open seniors table + CSV',
   transfers: 'Open moved-farther table + CSV',
-  conjunctive: 'Open GW vs seniors overview',
 }
 
-function renderStepChrome(index: number) {
-  const step = STORY_STEPS[index]
-  const kicker = document.getElementById('story-kicker')
-  const title = document.getElementById('story-title')
-  const body = document.getElementById('story-body')
-  const counter = document.getElementById('story-step-counter')
-  const prev = document.getElementById('story-prev') as HTMLButtonElement | null
-  const next = document.getElementById('story-next') as HTMLButtonElement | null
-  const dots = document.getElementById('story-dots')
-  const panelBtn = document.getElementById('story-panel-btn') as HTMLButtonElement | null
+function coachEl(): HTMLElement | null {
+  return document.getElementById('guide-coach')
+}
+
+function renderCoachChrome(index: number) {
+  const step = GUIDE_STEPS[index]
+  const kicker = document.getElementById('guide-kicker')
+  const title = document.getElementById('guide-title')
+  const body = document.getElementById('guide-body')
+  const counter = document.getElementById('guide-step-counter')
+  const prev = document.getElementById('guide-prev') as HTMLButtonElement | null
+  const next = document.getElementById('guide-next') as HTMLButtonElement | null
+  const dots = document.getElementById('guide-dots')
+  const receiptBtn = document.getElementById('guide-receipt-btn') as HTMLButtonElement | null
 
   if (kicker) kicker.textContent = step.kicker
   if (title) title.textContent = step.title
   if (body) body.textContent = step.body
-  if (counter) counter.textContent = `${index + 1} / ${STORY_STEPS.length}`
+  if (counter) counter.textContent = `${index + 1} / ${GUIDE_STEPS.length}`
   if (prev) prev.disabled = index <= 0
   if (next) {
-    next.disabled = index >= STORY_STEPS.length - 1
-    next.textContent = index >= STORY_STEPS.length - 1 ? 'Done' : 'Next →'
+    next.disabled = false
+    next.textContent = index >= GUIDE_STEPS.length - 1 ? 'Done' : 'Next →'
   }
   if (dots) {
-    dots.innerHTML = STORY_STEPS.map((_, i) =>
-      `<button type="button" class="story-dot${i === index ? ' active' : ''}" data-story-step="${i}" aria-label="Go to step ${i + 1}"></button>`,
+    dots.innerHTML = GUIDE_STEPS.map((_, i) =>
+      `<button type="button" class="story-dot${i === index ? ' active' : ''}" data-guide-step="${i}" aria-label="Go to step ${i + 1}"></button>`,
     ).join('')
   }
-  if (panelBtn) {
+  if (receiptBtn) {
     if (step.panel) {
-      panelBtn.classList.remove('hidden')
-      panelBtn.textContent = PANEL_BTN_LABEL[step.panel] || 'Open details'
+      receiptBtn.classList.remove('hidden')
+      receiptBtn.textContent = RECEIPT_BTN_LABEL[step.panel] || 'Open receipt'
     } else {
-      panelBtn.classList.add('hidden')
+      receiptBtn.classList.add('hidden')
     }
   }
 }
 
-function openStepPanel(step: StoryStep) {
+function openStepReceipt(step: GuideStep) {
   if (!cbs || !step.panel) return
   if (step.panel === 'river-shrink') cbs.showRiverShrink()
   else if (step.panel === 'dry-reach') cbs.showDryReach()
   else if (step.panel === 'transfers') cbs.showTransfers()
-  else if (step.panel === 'conjunctive') cbs.showConjunctive()
 }
 
-/** Apply map + caption for a story step. */
-export function goToStoryStep(index: number, options: { openPanel?: boolean } = {}) {
-  if (!cbs) return
-  // Default: do not auto-open heavy modals (blocks phones + traps Story nav).
-  const openPanel = options.openPanel === true
-  currentIndex = Math.max(0, Math.min(STORY_STEPS.length - 1, index))
-  const step = STORY_STEPS[currentIndex]
+function setCoachVisible(on: boolean) {
+  const el = coachEl()
+  el?.classList.toggle('hidden', !on)
+  document.body.classList.toggle('guide-active', on)
+  cbs?.onGuideActiveChange?.(on)
+}
+
+/** Apply map + caption for a guide step. */
+export function goToGuideStep(index: number, options: { openReceipt?: boolean } = {}) {
+  if (!cbs || !guideActive) return
+  const openReceipt = options.openReceipt === true
+  currentIndex = Math.max(0, Math.min(GUIDE_STEPS.length - 1, index))
+  const step = GUIDE_STEPS[currentIndex]
 
   if (step.flowEra) {
     state.flowEra = step.flowEra
@@ -188,9 +207,8 @@ export function goToStoryStep(index: number, options: { openPanel?: boolean } = 
   state.selectedWRs = new Set()
 
   const showPods = step.showPods ?? (step.highlightMode != null && step.highlightMode !== 'none')
-  const showWells = !!step.showWells
   cbs.setPodsEnabled(showPods)
-  cbs.setWellsEnabled(showWells)
+  cbs.setWellsEnabled(!!step.showWells)
 
   if (step.highlightMode === 'transfers') {
     cbs.ensureCanalsVisible?.()
@@ -198,37 +216,68 @@ export function goToStoryStep(index: number, options: { openPanel?: boolean } = 
 
   syncSidebarToState()
   cbs.refreshData()
-  renderStepChrome(currentIndex)
+  renderCoachChrome(currentIndex)
 
   if (step.view) {
     cbs.setView(step.view.lat, step.view.lon, step.view.zoom)
   }
 
-  if (openPanel) openStepPanel(step)
+  if (openReceipt) openStepReceipt(step)
 
   cbs.onStepChange?.(currentIndex)
 }
 
-export function wireStory(callbacks: StoryCallbacks) {
-  cbs = callbacks
-  renderStepChrome(currentIndex)
+/** @deprecated */
+export function goToStoryStep(index: number, options: { openPanel?: boolean } = {}) {
+  if (!guideActive) startGuide(index)
+  else goToGuideStep(index, { openReceipt: options.openPanel === true })
+}
 
-  document.getElementById('story-prev')?.addEventListener('click', () => {
-    if (currentIndex > 0) goToStoryStep(currentIndex - 1)
+export function startGuide(index = 0) {
+  if (!cbs) return
+  guideActive = true
+  setCoachVisible(true)
+  goToGuideStep(index, { openReceipt: false })
+}
+
+export function dismissGuide() {
+  guideActive = false
+  setCoachVisible(false)
+  cbs?.onStepChange?.(null)
+}
+
+export function wireGuide(callbacks: GuideCallbacks) {
+  cbs = callbacks
+  setCoachVisible(false)
+
+  document.getElementById('guide-start-btn')?.addEventListener('click', () => {
+    startGuide(0)
   })
-  document.getElementById('story-next')?.addEventListener('click', () => {
-    if (currentIndex < STORY_STEPS.length - 1) goToStoryStep(currentIndex + 1)
+  document.getElementById('guide-dismiss')?.addEventListener('click', () => {
+    dismissGuide()
   })
-  document.getElementById('story-dots')?.addEventListener('click', e => {
-    const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-story-step]')
+  document.getElementById('guide-prev')?.addEventListener('click', () => {
+    if (currentIndex > 0) goToGuideStep(currentIndex - 1)
+  })
+  document.getElementById('guide-next')?.addEventListener('click', () => {
+    if (currentIndex >= GUIDE_STEPS.length - 1) {
+      dismissGuide()
+      return
+    }
+    goToGuideStep(currentIndex + 1)
+  })
+  document.getElementById('guide-dots')?.addEventListener('click', e => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-guide-step]')
     if (!btn) return
-    const i = parseInt(btn.dataset.storyStep || '', 10)
-    if (isFinite(i)) goToStoryStep(i)
+    const i = parseInt(btn.dataset.guideStep || '', 10)
+    if (isFinite(i)) goToGuideStep(i)
   })
-  document.getElementById('story-restart')?.addEventListener('click', () => {
-    goToStoryStep(0)
+  document.getElementById('guide-receipt-btn')?.addEventListener('click', () => {
+    openStepReceipt(GUIDE_STEPS[currentIndex])
   })
-  document.getElementById('story-panel-btn')?.addEventListener('click', () => {
-    openStepPanel(STORY_STEPS[currentIndex])
-  })
+}
+
+/** @deprecated */
+export function wireStory(callbacks: GuideCallbacks & { showConjunctive?: () => void }) {
+  wireGuide(callbacks)
 }

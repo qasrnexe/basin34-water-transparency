@@ -2,9 +2,8 @@ import { DISTRICT_POU_KM2, NEW_GROUND_KM, CONFLICT_CORRIDOR_KM, TRANSFER_DIST_KM
 import type { GeoFeature, PodRecord, WellRecord } from '../types'
 import { conflictJunior, conflictSenior } from '../filters'
 import { state } from '../state'
-import { fetchAnnualMeans, fetchGageFlowHistory, mergedYearSeries, type AnnualMean, type GageFlowHistory } from '../usgs'
+import { fetchAnnualMeans, fetchGageFlowHistory, fetchInstantaneousCfs, mergedYearSeries, type AnnualMean, type GageFlowHistory } from '../usgs'
 import { enhanceCharts, seriesFromPointsWithGaps, svgChart } from './chart'
-import { openModal } from './modal'
 import {
   DRY_REACH_METHODOLOGY,
   DRY_REACH_SENIOR_YEAR,
@@ -17,11 +16,34 @@ import {
   listMovedFarther,
   movedFartherToCsv,
 } from '../movedFarther'
-import { fetchInstantaneousCfs } from '../usgs'
 
-/** Width for charts rendered inside the lightbox modal. */
-function modalChartW(): number {
-  return Math.min(640, Math.max(280, window.innerWidth - 48))
+/** Chart width from the open inspector (map-adjacent, not a lightbox). */
+function inspectorChartW(): number {
+  const panel = document.getElementById('details')
+  const w = panel?.clientWidth || 360
+  return Math.max(240, Math.min(560, w - 28))
+}
+
+export type ReceiptKind = 'dry-reach' | 'moved-farther' | 'river-shrink' | 'conjunctive' | 'appropriation' | 'conflict' | null
+
+let activeReceipt: ReceiptKind = null
+let receiptReopen: (() => void) | null = null
+let detailsPinned = false
+
+export function getActiveReceipt(): ReceiptKind {
+  return activeReceipt
+}
+
+export function getReceiptReopen(): (() => void) | null {
+  return receiptReopen
+}
+
+export function isDetailsPinned(): boolean {
+  return detailsPinned
+}
+
+export function isDetailsOpen(): boolean {
+  return !!document.getElementById('details')?.classList.contains('open')
 }
 
 /** Main-stem gages used in the Mackay → Moore → Arco step-down story (USGS NWIS coords). */
@@ -44,23 +66,50 @@ const EXTENT_CHAIN_SITES = new Set([
 
 const ZERO_CFS = 0.5
 
-function open(html: string) {
+export interface OpenInspectorOpts {
+  wide?: boolean
+  pinned?: boolean
+  receipt?: ReceiptKind
+  reopen?: () => void
+  heading?: string
+}
+
+function open(html: string, opts: OpenInspectorOpts = {}) {
   const panel = document.getElementById('details')!
   const content = document.getElementById('details-content')!
+  const heading = document.getElementById('details-heading')
   content.innerHTML = html
   panel.classList.add('open')
+  panel.classList.toggle('wide', !!opts.wide)
+  panel.classList.toggle('receipt', !!opts.receipt || !!opts.wide)
+  detailsPinned = opts.pinned === true || !!opts.receipt
+  activeReceipt = opts.receipt ?? null
+  receiptReopen = opts.reopen ?? (opts.receipt ? () => open(html, opts) : null)
+  if (heading) heading.textContent = opts.heading || (opts.receipt ? 'Receipt' : 'Inspector')
   enhanceCharts(content)
 }
 
 export function closeDetails() {
-  document.getElementById('details')?.classList.remove('open')
+  document.getElementById('details')?.classList.remove('open', 'wide', 'receipt')
+  detailsPinned = false
+  activeReceipt = null
+  receiptReopen = null
+  const heading = document.getElementById('details-heading')
+  if (heading) heading.textContent = 'Inspector'
 }
 
 const FOOT = `<div style="margin-top:6px;font-size:0.7em;color:var(--text-muted)">`
 
-export function showPodDetails(rec: PodRecord, store: DataStore) {
+export function showPodDetails(rec: PodRecord, store: DataStore, opts?: { fromReceipt?: boolean }) {
+  const keepReceipt = !!opts?.fromReceipt && !!receiptReopen
+  const reopen = receiptReopen
+  const receipt = activeReceipt
   const p = rec.feature.properties
-  let html = `<h3 style="margin-top:0">Water Right ${rec.wr || p.OBJECTID || ''}</h3>`
+  let html = ''
+  if (keepReceipt) {
+    html += `<button type="button" class="zoom-btn" data-back-receipt style="margin-bottom:8px">← Back to list</button>`
+  }
+  html += `<h3 style="margin-top:0">Water Right ${rec.wr || p.OBJECTID || ''}</h3>`
   if (rec.year != null) html += priorityBadge(rec.year)
   if (store.transferDistKm.has(rec.wr)) html += transferBadge(store.transferDistKm.get(rec.wr)!)
   if (rec.corridorDistKm > CONFLICT_CORRIDOR_KM) {
@@ -81,7 +130,12 @@ export function showPodDetails(rec: PodRecord, store: DataStore) {
   }
   if (p.WRReport) html += `<div style="margin-top:4px"><a href="${p.WRReport}" target="_blank" rel="noopener">Official Water Right Report →</a></div>`
   html += `${FOOT}Data: IDWR WaterRightPods (Basin 34 / WD34). PriorityDate is the authoritative seniority field.</div>`
-  open(html)
+  open(html, {
+    heading: rec.wr ? `Right ${rec.wr}` : 'Water right',
+    receipt: keepReceipt ? receipt : null,
+    reopen: keepReceipt ? reopen ?? undefined : undefined,
+    pinned: keepReceipt,
+  })
 }
 
 export function showWellDetails(rec: WellRecord) {
@@ -161,7 +215,7 @@ export function showGageDetails(feature: GeoFeature) {
   }
   if (p.url) html += `<a href="${p.url}" target="_blank" rel="noopener">Open full USGS page →</a>`
   html += `${FOOT}Current flow is the latest USGS NWIS instantaneous discharge (00060) when the site reports it. Annual chart uses approved calendar-year means. Neutral visualization only.</div>`
-  openModal(html)
+  open(html, { wide: true, heading: p.name || 'Stream gage', pinned: false })
 
   if (!p.site_no) {
     const live = document.getElementById('gage-live')
@@ -307,7 +361,7 @@ function renderGageChart(
       : []
 
   html += svgChart({
-    width: modalChartW(),
+    width: inspectorChartW(),
     height: 280,
     series: chartSeries,
     refLines,
@@ -370,7 +424,12 @@ export function showConflictsOverview(store: DataStore) {
 
   html += `${FOOT}Geometric + priority-date proxy for rights that plausibly share the same connected surface-water path — not a legal injury finding. ` +
     `Springs and creeks in the Lost River Range may be hydrologically separate even when filed under Basin 34. Verify with IDWR reports and WD34 accounting.</div>`
-  open(html)
+  open(html, {
+    wide: true,
+    receipt: 'conflict',
+    heading: 'Potential conflicts',
+    reopen: () => showConflictsOverview(store),
+  })
 }
 
 function conflictCard(rec: PodRecord): string {
@@ -413,7 +472,7 @@ export function showTransfersOverview(store: DataStore) {
 
   if (!rows.length) {
     html += `<p>No POD↔POU distance flags yet. Wait for Place of Use enrichment to finish, then retry.</p>`
-    openModal(html)
+    open(html, { wide: true })
     return
   }
 
@@ -465,7 +524,7 @@ export function showTransfersOverview(store: DataStore) {
     `IDWR serves current POU geometry only. Original (pre-change) places of use need IDWR transfer records (linked from each right’s report). ` +
     `Threshold: &gt;${TRANSFER_DIST_KM} km POD↔POU; off-corridor &gt;${NEW_GROUND_KM} km.</p>`
 
-  openModal(html)
+  open(html, { wide: true })
 
   document.getElementById('moved-farther-csv')?.addEventListener('click', () => {
     const q = (document.getElementById('moved-farther-owner-filter') as HTMLInputElement | null)?.value.trim().toLowerCase() || ''
@@ -551,7 +610,7 @@ export async function showAppropriationPanel(store: DataStore) {
   html += `<div style="font-size:0.85em;margin-bottom:4px">Cumulative <strong>authorized</strong> maximum diversion rate of all ${rights.length.toLocaleString()} dated Basin 34 rights, by priority year — currently <strong>${Math.round(tot).toLocaleString()} cfs</strong> (${Math.round(surf).toLocaleString()} surface + ${Math.round(gw).toLocaleString()} groundwater).</div>`
   html += `<div id="appropriation-chart">`
   html += svgChart({
-    width: modalChartW(),
+    width: inspectorChartW(),
     height: 240,
     series: [
       { points: cumAll, color: '#64748b', label: 'all rights (cumulative cfs)', kind: 'step', width: 2 },
@@ -563,7 +622,7 @@ export async function showAppropriationPanel(store: DataStore) {
   html += `</div>`
   html += `<div id="appropriation-supply" style="font-size:0.8em;color:var(--text-muted);margin-top:6px">Loading measured supply at the Arco gage (USGS 13132500)…</div>`
   html += `${FOOT}Authorized maximum rates are not the same as actual use (rights are limited by supply, priority administration, and season), but the gap between paper rights and measured flow is the standard first-order view of overappropriation. Hover the charts for per-year values. Data: IDWR PriorityDate + OverallMaxDiversionRate; USGS NWIS.</div>`
-  openModal(html)
+  open(html, { wide: true })
 
   try {
     const flow = await fetchAnnualMeans('13132500')
@@ -577,7 +636,7 @@ export async function showAppropriationPanel(store: DataStore) {
       `total authorized rights (${Math.round(tot).toLocaleString()} cfs) vs the long-term mean flow at Arco ` +
       `(${meanFlow.toFixed(0)} cfs, ${flow[0].year}–${flow[flow.length - 1].year}).</div>` +
       svgChart({
-        width: modalChartW(),
+        width: inspectorChartW(),
         height: 170,
         series: [{
           points: flow.map(d => ({ x: d.year, y: d.cfs })),
@@ -612,7 +671,7 @@ export async function showReachLossPanel() {
   html += `<div id="shrink-chart" style="font-size:0.8em;color:var(--text-muted)">Loading full gage histories from USGS NWIS (daily + annual)…</div>`
   html += `${FOOT}Calendar-year mean cfs (daily values averaged over all days, dry days = 0). ` +
     `Reach % = downstream ÷ Mackay that year. Lines break at multi-year gaps so missing years are not drawn as false ramps. Neutral mass-balance view.</div>`
-  openModal(html)
+  open(html, { wide: true })
 
   try {
     const [mackayH, mooreH, arcoH] = await Promise.all([
@@ -700,7 +759,7 @@ export async function showReachLossPanel() {
       `(${lateArcoZeros} of those ${n} years had zero at Arco).</div>` +
       mooreTableHtml +
       svgChart({
-        width: modalChartW(),
+        width: inspectorChartW(),
         height: 300,
         series: [
           ...seriesFromPointsWithGaps(
@@ -720,7 +779,7 @@ export async function showReachLossPanel() {
         yLabel: 'calendar-year mean cfs',
       }) +
       svgChart({
-        width: modalChartW(),
+        width: inspectorChartW(),
         height: 200,
         series: pctSeries,
         yLabel: '% of Mackay flow',
@@ -728,7 +787,7 @@ export async function showReachLossPanel() {
       }) +
       (mooreYears.length >= 2
         ? svgChart({
-            width: modalChartW(),
+            width: inspectorChartW(),
             height: 160,
             series: [
               {
@@ -751,7 +810,7 @@ export async function showReachLossPanel() {
           })
         : '') +
       svgChart({
-        width: modalChartW(),
+        width: inspectorChartW(),
         height: 160,
         series: seriesFromPointsWithGaps(
           mackayArco.map(d => ({ x: d.year, y: Math.max(0, d.mackay - d.arco!) })),
@@ -800,7 +859,7 @@ export async function showConjunctivePanel(store: DataStore) {
     `<strong>${post1950Wells.toLocaleString()} irrigation wells</strong> were added in Basin 34 — ` +
     `shown in violet on the map, above the senior (pre-1950) surface rights downstream in yellow.</div>`
   html += svgChart({
-    width: modalChartW(),
+    width: inspectorChartW(),
     height: 210,
     series: [
       { points: cumGwCfs, color: '#7c3aed', label: 'cumulative GW authorized cfs', kind: 'step', width: 2 },
@@ -810,7 +869,7 @@ export async function showConjunctivePanel(store: DataStore) {
   })
   html += `<div id="conjunctive-supply" style="font-size:0.8em;color:var(--text-muted);margin-top:6px">Loading measured flow at the Arco gage (USGS 13132500)…</div>`
   html += `${FOOT}GW rights from IDWR PriorityDate + OverallMaxDiversionRate; well construction years from IDWR Wells. Hover the charts for per-year values. Correlation shown for context, not causation — see USGS SIR reports for the basin's groundwater/surface-water connection studies.</div>`
-  openModal(html)
+  open(html, { wide: true })
 
   try {
     const flow = await fetchAnnualMeans('13132500')
@@ -827,7 +886,7 @@ export async function showConjunctivePanel(store: DataStore) {
       `<strong style="color:${pct < 0 ? '#dc2626' : '#16a34a'}">${pct < 0 ? '▼' : '▲'} ${Math.abs(pct).toFixed(0)}%</strong> ` +
       `recent ${n}-yr mean (${recent.toFixed(0)} cfs) vs first ${n} yrs of record (${early.toFixed(0)} cfs).</div>` +
       svgChart({
-        width: modalChartW(),
+        width: inspectorChartW(),
         height: 170,
         series: [{
           points: flow.map(d => ({ x: d.year, y: d.cfs })),
@@ -903,7 +962,7 @@ export function showDryReachSeniorsPanel(store: DataStore) {
 
   if (!rows.length) {
     html += `<p>No matching rights with current corridor distances loaded yet. Wait for data finish, then retry.</p>`
-    openModal(html)
+    open(html, { wide: true })
     return
   }
 
@@ -947,7 +1006,7 @@ export function showDryReachSeniorsPanel(store: DataStore) {
     initial.truncated ? `Showing top 200 of ${rows.length}. CSV includes all.` : ''
   }</p>`
 
-  openModal(html)
+  open(html, { wide: true })
 
   document.getElementById('dry-reach-csv')?.addEventListener('click', () => {
     const q = (document.getElementById('dry-reach-owner-filter') as HTMLInputElement | null)?.value.trim().toLowerCase() || ''

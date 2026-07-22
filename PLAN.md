@@ -15,103 +15,61 @@ A **public accountability / transparency tool** for Water District 34 (Big Lost 
 1. **Fast enough to use** in a meeting (not a 26MB stutter-fest)
 2. **Clear enough** that a neighbor can see: lower river goes dry; senior surface rights sit there; later development expanded upstream / off-corridor
 3. **Exportable** — ranked tables + CSV, not only a map
-4. **Careful** — evidence and methodology, no accusations; **do not feature private families as the default “example”** in Story captions/presets. Owner names from IDWR stay in the data, search, tables, and CSV.
+4. **Careful** — evidence and methodology, no accusations; **do not feature private families as the default “example”** in Guide captions. Owner names from IDWR stay in the data, search, tables, and CSV.
 
 > Think “receipts + rankings + map,” not “heavy GIS for its own sake.”
 
 **Tone:** Neutral, sourced. Geometric / priority / gage proxies — not court findings.
 
-**Product rule:** at most **three primary insight receipts**:
+---
 
-1. River shrinks / goes dry below Moore  
-2. Downstream seniors on that dry reach (CSV)  
-3. Water authorized far from / off the corridor — “moved farther” (CSV)
+## UX law (do not break)
 
-Everything else is Advanced or Story color — not a peer lens. **Do not add a seventh exclusive `HighlightMode`.**
+1. **One workspace:** Explore is always on. No Story | Explore mode toggle.
+2. **Thin Guide:** “Walk the receipts” is a dismissible coach that flies the map and opens inspector receipts — not a second control panel (no duplicate basemap / then-now / jump grid).
+3. **Map + inspector only:** Feature detail and receipts (tables, charts, gages) open in `#details`. **No full-screen lightbox** for product flows.
+4. **Three primary receipts:** Downstream seniors · Water moved farther · River shrink. Everything else is Advanced.
+5. **Zoom completes the sacred path:** CSV/table Zoom selects the right, paints purple POD↔POU lines, keeps the map visible, offers **← Back to list**.
+6. **Close model:** Esc and ✕ always close the inspector. Map click clears selection but does not dismiss a pinned receipt.
+
+**Product rule:** at most **three primary insight receipts**. Do not add a seventh exclusive `HighlightMode`.
 
 ---
 
 ## Current state (2026-07-22)
 
-- [x] Live at water.bnm.farm; POD-first Explore; calm stars; dry-reach CSV; mobile sheet
 - [x] F0 data refresh (`asOf` 2026-07-22)
-- [x] F1 — Water moved farther rename + CSV + honest copy; Advanced optgroup; canals auto-show
-- [x] F2 — Explore nested: hint / owner / basemap / short layers / insight receipts / Advanced collapsed
-- [x] F3 — Story trimmed to 5 steps (three receipts)
-- [x] F4 — Evidence research: no clean public east/west designation polygons; claim stays narrative + satellite (see below)
-- [x] F5 — Live USGS instantaneous CFS on gage click (annual history retained)
+- [x] F1–F5 receipts roadmap (moved farther CSV, sidebar nest, story trim → now Guide, live USGS CFS)
+- [x] Guide not dual-mode + inspector unification (this pass)
+- [ ] Curtailment / “who shut off when” (hardest data — later)
 
 ---
 
-## Build order
+## Build order (recent)
 
 ```text
-F0. Data refresh                                      ← DONE
-F1. Consolidate Explore + honest “moved farther”      ← DONE
-F2. Sidebar IA (insight-first, Advanced nested)       ← DONE
-F3. Story trim 7 → 5                                  ← DONE
-F4. Evidence for recent lined canals                  ← researched; no new UI layer
-F5. Live USGS instantaneous on gages                  ← DONE (chose live USGS over curtailment)
+F0–F5 …                                          ← DONE
+G1. Drop Story mode; thin Guide + inspector UX   ← DONE
 ```
 
 ---
 
-### F0 — Data freshness
+### Guide (replaces Story mode)
 
-Re-run IDWR + NHD canals/mainstem/sinks + NWI; `scripts/etl/fetch_nhd_canals.py`; bump manifest.  
-**Caveat:** GIS lags dirt work. Always show **data as of**.
+- Header: **Walk the receipts** starts the coach  
+- Five steps: ★ → then/now → river shrink → dry-reach → moved farther  
+- Coach pinned in Explore (sheet peek on mobile when active)  
+- Receipts open in the wide/tall inspector — map stays visible  
 
----
+### Inspector
 
-### F1 — Consolidate + honest “moved farther”
+- Wide desktop rail for tables/charts; taller bottom sheet on mobile for receipts  
+- Sticky header with Close  
+- Live USGS CFS + annual chart for gages (inspector, not modal)  
 
-- Renamed user-facing “Potential transfers” → **Water moved farther** (mode id stays `transfers`)
-- Ranked table + owner filter + CSV (`src/movedFarther.ts`) matching dry-reach pattern
-- Honest copy: satellite for lined canals / east–west new ground; GIS = POD↔POU distance + off-corridor geometry — **not** “built since ~2010”
-- Auto-show NHD canals when this lens is on
-- Demoted `junior-dev` / `conflict` / `high-rate` under Advanced analyses optgroup
+### F4 evidence note (unchanged)
 
----
-
-### F2 — Sidebar IA
-
-Explore cold-open:
-
-- Hint + owner search + basemap + short layers (POD / wells / channel / canals)
-- Insight receipt buttons + primary map-emphasis select
-- **Advanced** `<details>`: rate/reach/POU fills, appropriation & timeline, extra layers, POD filters, then/now, reset
-
----
-
-### F3 — Story trim
-
-Five steps: overview → then/now → river shrink → dry-reach seniors → water moved farther.  
-GW boom / Arco standalone steps folded into Explore / dry-reach framing.
-
----
-
-### F4 — Evidence for *recent* lined canals (research note)
-
-**Finding (2026-07-22):** No clean public IDWR / WD34 **east-side / west-side of the river** designation polygons turned up for ETL. Available signals:
-
-| Source | What it is | Enough for UI? |
-|---|---|---|
-| NHD canals/pipelines | Geometry only; no “lined” | Already loaded — not a liner inventory |
-| Geometric “off corridor” | ~282 rights; **mostly pre-1950 priority** | Useful proxy; **must not** mean “last 10–15 years” |
-| BLR Ground Water District division map | Divisions 1–7 (not east/west of river) | Skip for this claim |
-| IDWR Open Data / water districts hub | Admin layers exist generally; no WD34 E/W designation layer found | Revisit if IDWR publishes one |
-
-**Decision:** Ship **no new F4 map layer**. Keep local reality in Story/panel copy (lined canals on satellite). Re-open only if a sourced polygon or transfer-filing table appears.
-
-**Parked (old F3 toys):** NHD pond polygons, NAIP swipe, fake change detection — only if a meeting need appears.
-
----
-
-### F5 — Harder receipts: live USGS
-
-Chose **live / fresher USGS instantaneous discharge** on gage click (`fetchInstantaneousCfs` in `src/usgs.ts`) over curtailment/accounting for this pass — same gage story, higher evidence, no new fashion layers.
-
-**Still later:** WD34 curtailment / “who shut off when” (hardest data).
+No clean public east/west designation polygons — lined-canal claim stays Guide/satellite narrative. Geometric off-corridor ≠ “last 10–15 years.”
 
 ---
 
@@ -123,4 +81,4 @@ Chose **live / fresher USGS instantaneous discharge** on gage click (`fetchInsta
 
 ## Success bar
 
-In &lt;5 minutes on a phone: tap ★ → purple links; see dry channel below Moore; download dry-reach CSV; open moved-farther CSV with honest methodology; see live CFS on a reporting gage; see data-as-of chip.
+In &lt;5 minutes on a phone: Walk the receipts → tap ★ → purple links; see dry channel; open seniors CSV and moved-farther CSV in the inspector with the map still visible; Esc closes the inspector; see data-as-of chip.

@@ -3,64 +3,27 @@ import { state } from '../state'
 import type { Basemap, FlowEra, HighlightMode } from '../types'
 import { MODE_HINTS } from './legend'
 
-export type UiMode = 'story' | 'explore'
-
 export interface SidebarCallbacks {
-  /** Filters changed: rebuild layers and legend. */
   refreshData: () => void
   setLayerEnabled: (key: string, on: boolean) => void
   setBasemap: (b: Basemap) => void
   setFlowEra: (era: FlowEra) => void
   resetAll: () => void
-  /** Analysis view changed (called after refreshData). */
+  /** Map emphasis changed — do not auto-open receipts. */
   onHighlightMode?: (mode: HighlightMode) => void
-  /** "Appropriation vs. supply" button. */
   showAppropriation?: () => void
-  /** "River shrink: Mackay → Moore → Arco" button. */
   showRiverShrink?: () => void
-  /** Dry-reach seniors ranked table + CSV. */
   showDryReach?: () => void
-  /** Water moved farther ranked table + CSV. */
   showMovedFarther?: () => void
-  /** Conjunctive / GW boom panel. */
   showConjunctive?: () => void
-  /** Permalink / persistence hook when UI mode changes. */
-  onUiMode?: (mode: UiMode) => void
-  /** Mobile bottom-sheet expanded/collapsed (map should invalidateSize). */
   onSheetChange?: () => void
-  /** Owner highlight (story presets). */
   setOwnerHighlight?: (owner: string | null) => void
-  /** Zoom map to lower basin / Arco area. */
-  focusArco?: () => void
 }
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null
 
 function input(id: string): HTMLInputElement | null {
   return $<HTMLInputElement>(id)
-}
-
-const MODE_KEY = 'basin34-ui-mode-v2'
-
-export function getStoredUiMode(): UiMode {
-  const v = localStorage.getItem(MODE_KEY)
-  // Default Explore — the POD click → purple field lines workflow is the core map.
-  if (v === 'story') return 'story'
-  return 'explore'
-}
-
-export function applyUiMode(mode: UiMode) {
-  const story = $('story-panel')
-  const explore = $('explore-panel')
-  story?.classList.toggle('hidden', mode !== 'story')
-  explore?.classList.toggle('hidden', mode !== 'explore')
-  document.querySelectorAll<HTMLButtonElement>('.mode-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.mode === mode)
-  })
-  localStorage.setItem(MODE_KEY, mode)
-  document.body.dataset.uiMode = mode
-  // Explore needs room for controls; Story can stay collapsed on phones.
-  if (mode === 'explore' && isMobileSheet()) setSheetExpanded(true)
 }
 
 function isMobileSheet(): boolean {
@@ -74,14 +37,13 @@ export function setSheetExpanded(expanded: boolean) {
   if (handle) {
     handle.setAttribute('aria-expanded', expanded ? 'true' : 'false')
     const label = handle.querySelector('.sheet-handle-label')
-    if (label) label.textContent = expanded ? 'Hide panel' : 'Story & tools'
+    if (label) label.textContent = expanded ? 'Hide panel' : 'Tools'
   }
 }
 
 function wireMobileSheet(cb: SidebarCallbacks) {
-  // Default: collapsed peek so the map dominates on phones.
   if (isMobileSheet()) {
-    setSheetExpanded(document.body.dataset.uiMode === 'explore')
+    setSheetExpanded(false)
   } else {
     document.body.classList.remove('sheet-expanded', 'sheet-collapsed')
   }
@@ -95,7 +57,7 @@ function wireMobileSheet(cb: SidebarCallbacks) {
 
   window.matchMedia('(max-width: 768px)').addEventListener('change', e => {
     if (e.matches) {
-      setSheetExpanded(document.body.dataset.uiMode === 'explore')
+      setSheetExpanded(false)
     } else {
       document.body.classList.remove('sheet-expanded', 'sheet-collapsed')
     }
@@ -127,9 +89,6 @@ function updateModeHint() {
 }
 
 function syncEraButtons() {
-  document.querySelectorAll<HTMLButtonElement>('.era-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.era === state.flowEra)
-  })
   document.querySelectorAll<HTMLInputElement>('input[name="era"]').forEach(r => {
     r.checked = r.value === state.flowEra
   })
@@ -170,75 +129,8 @@ function setHighlightMode(mode: HighlightMode, cb: SidebarCallbacks) {
 }
 
 export function wireSidebar(cb: SidebarCallbacks) {
-  // Story / Explore mode
-  const initialMode = getStoredUiMode()
-  applyUiMode(initialMode)
-  cb.onUiMode?.(initialMode)
   wireMobileSheet(cb)
-
-  document.querySelectorAll<HTMLButtonElement>('.mode-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const mode = (btn.dataset.mode as UiMode) || 'story'
-      applyUiMode(mode)
-      cb.onUiMode?.(mode)
-    })
-  })
-  $('open-explore-btn')?.addEventListener('click', () => {
-    applyUiMode('explore')
-    cb.onUiMode?.('explore')
-  })
-
-  // Story presets
-  document.querySelectorAll<HTMLButtonElement>('.preset-btn[data-preset]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const preset = btn.dataset.preset
-      if (preset === 'river-shrink') {
-        cb.showRiverShrink?.()
-        return
-      }
-      if (preset === 'dry-reach') {
-        cb.showDryReach?.()
-        return
-      }
-      if (preset === 'senior') {
-        setHighlightMode('senior-downstream', cb)
-        return
-      }
-      if (preset === 'conjunctive') {
-        setHighlightMode('conjunctive', cb)
-        return
-      }
-      if (preset === 'transfers') {
-        setHighlightMode('transfers', cb)
-        cb.showMovedFarther?.()
-        return
-      }
-      if (preset === 'then-now') {
-        state.flowEra = 'recent'
-        syncEraButtons()
-        cb.setFlowEra('recent')
-        return
-      }
-      if (preset === 'arco') {
-        // Legacy preset — lower basin focus near Arco gage
-        state.flowEra = 'recent'
-        syncEraButtons()
-        cb.setFlowEra('recent')
-        setHighlightMode('senior-downstream', cb)
-        cb.focusArco?.()
-        return
-      }
-    })
-  })
-
-  document.querySelectorAll<HTMLButtonElement>('.era-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const era = btn.dataset.era as FlowEra
-      state.flowEra = era
-      syncEraButtons()
-      cb.setFlowEra(era)
-    })
-  })
+  document.body.dataset.uiMode = 'explore'
 
   // Layer toggles
   for (const key of ['boundary', 'riparian', 'hydro', 'pods', 'wells', 'gages', 'flowExtent', 'reaches', 'diversions']) {
@@ -247,7 +139,7 @@ export function wireSidebar(cb: SidebarCallbacks) {
     })
   }
 
-  // Analysis view
+  // Map emphasis — map only; receipts open via Insight buttons
   $<HTMLSelectElement>('highlight-mode')?.addEventListener('change', e => {
     setHighlightMode((e.target as HTMLSelectElement).value as HighlightMode, cb)
   })
@@ -305,7 +197,6 @@ export function wireSidebar(cb: SidebarCallbacks) {
     cb.refreshData()
   })
 
-  // Flow extent era (explore radios)
   document.querySelectorAll<HTMLInputElement>('input[name="era"]').forEach(radio => {
     radio.addEventListener('change', () => {
       state.flowEra = radio.value as FlowEra
@@ -314,15 +205,17 @@ export function wireSidebar(cb: SidebarCallbacks) {
     })
   })
 
-  // Basemap (story + explore switchers)
   document.querySelectorAll<HTMLButtonElement>('.basemap-btn').forEach(btn => {
-    btn.addEventListener('click', () => cb.setBasemap(btn.dataset.basemap as Basemap))
+    btn.addEventListener('click', () => {
+      document.querySelectorAll<HTMLButtonElement>('.basemap-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.basemap === btn.dataset.basemap)
+      })
+      cb.setBasemap(btn.dataset.basemap as Basemap)
+    })
   })
 
-  // Reset
   $('reset-all')?.addEventListener('click', cb.resetAll)
 
-  // Share
   const shareBtn = $('share-btn')
   shareBtn?.addEventListener('click', async () => {
     try {
@@ -335,13 +228,12 @@ export function wireSidebar(cb: SidebarCallbacks) {
     }
   })
 
-  // About
   $('info-btn')?.addEventListener('click', () => {
     alert(
       'Basin 34 Water Transparency\n\n' +
-      'Core move: tap a ★ POD (point of diversion). Purple dashed lines connect that takeout to its place-of-use fields, and the side panel shows the water right.\n\n' +
-      'Explore is the default map. Story walks three receipts: dry channel, downstream seniors (CSV), and water moved farther (CSV). Advanced tools stay nested.\n\n' +
-      'This is a community transparency tool, not legal advice. For rights, administration, or legal matters, use official IDWR and Water District 34 resources.\n\n' +
+      'Core move: tap a ★ POD (point of diversion). Purple dashed lines connect that takeout to its place-of-use fields.\n\n' +
+      'Walk the receipts (header) is a short guided tour. Explore is the workspace — insight receipts open in the side inspector so the map stays visible.\n\n' +
+      'This is a community transparency tool, not legal advice.\n\n' +
       'Share view copies a permalink to the current map.',
     )
   })
