@@ -57,7 +57,8 @@ export const EMPHASIS_COLORS: Record<string, { stroke: string; fill: string; lab
 // ---------- Sizes ----------
 
 function podRadius(rate: number): number {
-  return Math.max(2, Math.min(7, Math.sqrt(rate || 0) * 1.8))
+  // Keep default markers modest so satellite texture stays readable at basin zoom.
+  return Math.max(1.6, Math.min(5, Math.sqrt(rate || 0) * 1.35))
 }
 
 export function wellRadius(rate: number): number {
@@ -73,72 +74,86 @@ export interface PodIconSpec {
   fill: string
   fillOpacity: number
   strokeWidth: number
-  glow: 'none' | 'strong' | 'soft'
+  /** Kept for cache keys; glow is intentionally unused (too noisy on satellite). */
+  glow: 'none'
 }
 
 /**
  * Compute the icon spec for a POD from its base color + emphasis.
- * Pure data → easy to test and to cache.
+ * Quiet by default; selection / analysis use stroke + size, not glow.
  */
 export function podIconSpec(rec: PodRecord, baseColor: string, emphasis: PodEmphasis): PodIconSpec {
   let radius = podRadius(rec.rate)
   let stroke = baseColor
   let fill = baseColor
-  let fillOpacity = 0.7
-  let strokeWidth = 0.5
-  let glow: PodIconSpec['glow'] = 'none'
+  let fillOpacity = 0.45
+  let strokeWidth = 0.8
 
   const accent = EMPHASIS_COLORS[emphasis]
   switch (emphasis) {
     case 'selected':
-      radius = Math.max(radius * 2.0, 6)
-      stroke = accent.stroke; fill = accent.fill
-      fillOpacity = 0.85; strokeWidth = 2.5; glow = 'soft'
+      radius = Math.max(radius * 1.55, 4.5)
+      stroke = accent.stroke
+      fill = accent.fill
+      fillOpacity = 0.9
+      strokeWidth = 2
       break
     case 'owner':
-      radius *= 1.8
-      stroke = accent.stroke; fill = accent.fill
-      fillOpacity = 0.95; strokeWidth = 1.5
+      radius *= 1.35
+      stroke = accent.stroke
+      fill = accent.fill
+      fillOpacity = 0.85
+      strokeWidth = 1.4
       break
     case 'senior':
     case 'conflict-senior':
-      radius = Math.max(radius * 2.6, 9)
-      stroke = accent.stroke; fill = accent.fill
-      fillOpacity = 0.95; strokeWidth = 3; glow = 'strong'
+      radius = Math.max(radius * 1.45, 4)
+      stroke = accent.stroke
+      fill = accent.fill
+      fillOpacity = 0.8
+      strokeWidth = 1.6
       break
     case 'junior':
     case 'conflict-junior':
     case 'conjunctive-gw':
-      radius = Math.max(radius * 2.0, 7)
-      stroke = accent.stroke; fill = accent.fill
-      fillOpacity = 0.95; strokeWidth = 2.5; glow = 'soft'
+      radius = Math.max(radius * 1.35, 3.8)
+      stroke = accent.stroke
+      fill = accent.fill
+      fillOpacity = 0.8
+      strokeWidth = 1.4
       break
     case 'transfer':
-      radius = Math.max(radius * 2.0, 6)
-      stroke = accent.stroke; fill = accent.fill
-      fillOpacity = 0.9; strokeWidth = 2.5
+      radius = Math.max(radius * 1.3, 3.6)
+      stroke = accent.stroke
+      fill = accent.fill
+      fillOpacity = 0.75
+      strokeWidth = 1.4
       break
     case 'high-rate':
-      radius = Math.max(radius, 5) * 1.4
-      stroke = accent.stroke; fill = accent.fill
-      fillOpacity = 0.9; strokeWidth = 1.5
+      radius = Math.max(radius, 3.2) * 1.2
+      stroke = accent.stroke
+      fill = accent.fill
+      fillOpacity = 0.8
+      strokeWidth = 1.2
       break
     case 'subdued':
-      radius *= 0.6
-      stroke = '#64748b'; fill = '#64748b'
-      fillOpacity = 0.18
+      radius *= 0.55
+      stroke = '#94a3b8'
+      fill = '#94a3b8'
+      fillOpacity = 0.12
+      strokeWidth = 0.6
       break
     case 'normal':
       break
   }
 
   return {
-    size: Math.max(10, Math.min(24, Math.round(radius * 2.8))),
+    size: Math.max(8, Math.min(18, Math.round(radius * 2.6))),
     stroke,
     fill,
     fillOpacity: Math.round(fillOpacity * 100) / 100,
-    strokeWidth: Math.max(1, Math.round(strokeWidth)),
-    glow,
+    strokeWidth: Math.max(0.75, Math.round(strokeWidth * 10) / 10),
+    glow: 'none',
   }
 }
 
@@ -146,20 +161,15 @@ const iconCache = new Map<string, L.DivIcon>()
 
 /** Star-shaped divIcon, cached by style key (7k markers share a few dozen icons). */
 export function podStarIcon(spec: PodIconSpec): L.DivIcon {
-  const key = `${spec.size}|${spec.stroke}|${spec.fill}|${spec.fillOpacity}|${spec.strokeWidth}|${spec.glow}`
+  const key = `${spec.size}|${spec.stroke}|${spec.fill}|${spec.fillOpacity}|${spec.strokeWidth}`
   const cached = iconCache.get(key)
   if (cached) return cached
 
-  let filter = ''
-  if (spec.glow === 'strong') {
-    filter = `filter:drop-shadow(0 0 6px ${spec.stroke}) drop-shadow(0 0 3px ${spec.fill});`
-  } else if (spec.glow === 'soft') {
-    filter = `filter:drop-shadow(0 0 3px ${spec.stroke});`
-  }
+  // Crisp edge only — no drop-shadow glow (was washing out satellite at basin zoom).
   const html =
-    `<svg width="${spec.size}" height="${spec.size}" viewBox="0 0 24 24" style="display:block;${filter}">` +
+    `<svg width="${spec.size}" height="${spec.size}" viewBox="0 0 24 24" style="display:block">` +
     `<path d="M12 2 L15.09 8.26 L22 9.27 L17 14.14 L18.18 21.02 L12 17.77 L5.82 21.02 L7 14.14 L2 9.27 L8.91 8.26 Z" ` +
-    `fill="${spec.fill}" fill-opacity="${spec.fillOpacity}" stroke="${spec.stroke}" stroke-width="${spec.strokeWidth}" stroke-opacity="0.95"/></svg>`
+    `fill="${spec.fill}" fill-opacity="${spec.fillOpacity}" stroke="${spec.stroke}" stroke-width="${spec.strokeWidth}" stroke-opacity="0.9"/></svg>`
 
   const icon = L.divIcon({
     className: 'basin-pod-star',

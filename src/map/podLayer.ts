@@ -11,7 +11,7 @@ function clusterIcon(cluster: any): L.DivIcon {
   const count = cluster.getChildCount()
   const size = count > 100 ? 34 : count > 25 ? 30 : 26
   return L.divIcon({
-    html: `<div style="background:#334155;color:#e0e7ff;border:1px solid #1e2937;border-radius:50%;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;box-shadow:0 1px 3px rgba(15,23,42,0.3);">${count}</div>`,
+    html: `<div style="background:#334155;color:#e0e7ff;border:1px solid #1e2937;border-radius:50%;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;">${count}</div>`,
     className: '',
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],

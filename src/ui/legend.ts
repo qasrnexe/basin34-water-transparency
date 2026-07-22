@@ -9,7 +9,7 @@ const fillSwatch = (stroke: string, fill: string) =>
   `<span class="lg-poly" style="border-color:${stroke};background:${fill}"></span>`
 
 const MODE_LEGEND: Record<string, string> = {
-  'senior-downstream': `${star(EMPHASIS_COLORS.senior.stroke)} Pre-1950 rights at/below the focus reach (large, glowing). Others dimmed.`,
+  'senior-downstream': `${star(EMPHASIS_COLORS.senior.stroke)} Pre-1950 rights at/below the focus reach (emphasized). Others dimmed.`,
   'junior-dev': `${star(EMPHASIS_COLORS.junior.stroke)} Post-1980 rights/wells above the rate threshold (orange). Others dimmed.`,
   transfers: `${star(EMPHASIS_COLORS.transfer.stroke)} Rights whose POD sits far (&gt;8 km) from their place of use; dashed lines connect POD ↔ POU. ` +
     `${fillSwatch('#c2410c', 'rgba(249,115,22,0.45)')} solid orange POU = "new ground" — moved outside the river's natural corridor. Others dimmed.`,
