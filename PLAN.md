@@ -26,8 +26,8 @@ A **public accountability / transparency tool** for Water District 34 (Big Lost 
 ## Current state (2026-07-22)
 
 - [x] Live at water.bnm.farm (private family login); POD-first Explore default; calm stars; dry-reach CSV; Story; mobile sheet
-- [ ] Data extracts still **2026-06-09** — refresh before leaning on “new ponds / pipes” claims
-- [ ] Pipeline / “water moved farther” story is only half-told (transfers + new-ground exist; NHD pipes underused)
+- [x] F0 data refresh (ETL re-run; see manifest `asOf`)
+- [ ] F1 “Water moved farther” / lined-canals story still half-told
 - [ ] Explore sidebar still dense
 
 ---
@@ -35,33 +35,33 @@ A **public accountability / transparency tool** for Water District 34 (Big Lost 
 ## Build order (next)
 
 ```text
-F0. Data refresh (re-run ETL, bump manifest)           ← FIRST
-F1. “Water moved farther” lens (pipes + transfers + new ground)
+F0. Data refresh (re-run ETL, bump manifest)           ← DONE (this pass)
+F1. “Water moved farther” lens (lined canals + transfers + new ground)
 F2. Sidebar IA (insight-first, power tools nested)
-F3. Optional: ponds / reservoirs / aerial change cues
+F3. Optional: mapped waterbodies / aerial change cues
 E.  Later: WD34 curtailment/accounting, live USGS
 ```
 
 ---
 
-### F0 — Data freshness ← NEXT
-
-**Facts today:** `public/data/manifest.json` generated **2026-06-09**. IDWR POD/POU/wells + NHD canals/pipelines + NWI are all that age.
+### F0 — Data freshness
 
 **Do**
 
 1. Re-run `scripts/etl/fetch_idwr_pods_wells.py` (pods, wells, pou)
-2. Re-run NHD canal/pipeline extract (and mainstem if scripted)
+2. Re-run `scripts/etl/fetch_nhd_canals.py` + `fetch_nhd_mainstem.py` + `fetch_nwi_riparian.py`
 3. Commit updated GeoJSON + `manifest.json` with new `asOf`
-4. Spot-check: dry-reach count, transfer count, pipeline segment count before/after
+4. Spot-check: dry-reach count, transfer count, canal/pipeline segment counts before/after
 
-**Caveat:** NHD and IDWR lag real dirt work. Brand-new lined ponds may appear on satellite weeks/months before any GIS layer. The app should say **“data as of …”** prominently and never imply live construction inventory.
+**Caveat:** NHD and IDWR lag real dirt work. Brand-new lined canals may show on satellite weeks/months before GIS. The app should say **“data as of …”** prominently and never imply live construction inventory.
 
 **Done when:** manifest date is current; app data-as-of chip matches; no silent count regressions.
 
 ---
 
-### F1 — Story: pipes, ponds, water moved farther
+### F1 — Story: lined canals, water moved farther ← NEXT
+
+**Local reality (product language):** The egregious diversions that created “east side of the river” / “west side of the river” designations are **lined canals** carrying water to **new ground** broken out in the last ~10–15 years — not “lined ponds.” Prefer that wording in Story, captions, and lens copy.
 
 **What we already have (underused)**
 
@@ -69,31 +69,32 @@ E.  Later: WD34 curtailment/accounting, live USGS
 |---|---|---|
 | POD far from POU | Transfers analysis + purple connectors | Geometric proxy, not a filing |
 | POU off corridor | “New ground” orange fills in transfers | Geometric vs NHD+NWI corridor |
-| Pipe / canal geometry | `nhd-canals-pipelines` (~47 pipe segs, ~671 canal/ditch) | NHD inventory; incomplete & lagged |
+| Canal / pipe geometry | `nhd-canals-pipelines` (canal/ditch + pipeline fcodes) | NHD inventory; incomplete & lagged; does not mark “lined” |
 | Named diversions | Diversions layer | Aggregated from POD rates |
 
 **What we barely have**
 
-- Lined ponds: almost no POD `Source` hits on “POND”; no dedicated pond/reservoir layer loaded
+- Explicit “lined” attribute: not in NHD; satellite / local knowledge for Story captions
+- Clean east/west-of-river designation polygons from IDWR (if they exist as public GIS — investigate after F0)
 - “New this year” construction: not in these extracts
 
 **Recommended product shape (one lens, not five new toggles)**
 
 **Lens name:** **Water moved farther** (neutral)
 
-1. **Map:** NHD pipelines emphasized (thicker dotted); canals quieter; transfers + new-ground POUs on; optional POD↔POU lines for transfer set only  
+1. **Map:** NHD canals emphasized for the east/west new-ground story; pipelines still available; transfers + new-ground POUs on; optional POD↔POU lines for transfer set only  
 2. **Panel:** ranked table + CSV — distance POD→POU, corridor distance, owner, year, cfs — same accountability pattern as dry-reach  
-3. **Story step:** one guided step after dry-reach / GW: “Some water leaves the river corridor by pipe or re-authorization onto new ground — here is the public-geometry evidence”  
-4. **Satellite:** keep as basemap; caption tells user to look for lined ponds visually; do **not** invent a pond layer from thin air
+3. **Story step:** one guided step after dry-reach / GW: “Lined canals and re-authorization moved water onto new ground east and west of the river — here is the public-geometry evidence”  
+4. **Satellite:** keep as basemap; caption points at lined canal corridors visually; do **not** invent a liner inventory layer
 
 **Possible later data (only if F0 + F1 still feel thin)**
 
-- NHD waterbodies (reservoir/pond fcodes) clipped to basin — “mapped ponds,” not “lined ponds”  
+- Admin / diversion-district polygons if IDWR publishes east/west designations  
+- NHD waterbodies (reservoir/pond fcodes) as optional quiet layer — separate from lined-canal story  
 - NAIP / recent imagery swipe (heavy; optional)  
 - IDWR transfer / water-supply bank tables if a clean public extract exists  
-- County building/condos? Skip — wrong tool  
 
-**Tone:** “moved farther / off corridor / piped” — not “stolen.”
+**Tone:** “moved farther / off corridor / lined canal to new ground” — not “stolen.”
 
 ---
 
@@ -129,9 +130,9 @@ Story mode stays the guided tour; Explore is the workshop. Do **not** delete ana
 
 ---
 
-### F3 — Optional pond / change cues (only after F0–F2)
+### F3 — Optional waterbody / change cues (only after F0–F2)
 
-- Add NHD pond/reservoir polygons as a quiet optional layer (“Mapped waterbodies — NHD, not a liner inventory”)  
+- Optional NHD reservoir/pond polygons as a quiet layer (“Mapped waterbodies — NHD”) — separate from the lined-canal / east–west story  
 - If useful: a “compare eras” note pointing at satellite + then/now channel, not a fake change-detection product  
 
 ---
