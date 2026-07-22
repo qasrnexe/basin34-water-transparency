@@ -1,7 +1,7 @@
 # Basin 34 Water Transparency — Plan
 
 **Repo:** `qasrnexe/basin34-water-transparency`  
-**Live:** https://water.bnm.farm  
+**Live:** https://water.bnm.farm (private — same family Caddy login as farm.bnm.farm)  
 **Deploy:** `~/projects/tv-remote/homelab/scripts/deploy-water.sh` on the media box  
 
 **Purpose:** Single source of truth. On the media-box agent say: “read PLAN.md and do the next build slice.”
