@@ -204,7 +204,12 @@ export async function fetchInstantaneousCfs(siteNo: string): Promise<Instantaneo
     const cfs = parseFloat(v.value)
     if (isFinite(cfs)) {
       const quals = Array.isArray(v.qualifiers)
-        ? v.qualifiers.map((q: { qualifierCode?: string }) => q.qualifierCode).filter(Boolean).join(', ')
+        ? v.qualifiers
+            .map((q: string | { qualifierCode?: string; qualifierDescription?: string }) =>
+              typeof q === 'string' ? q : (q.qualifierCode || q.qualifierDescription || ''),
+            )
+            .filter(Boolean)
+            .join(', ')
         : ''
       result = { cfs, dateTime: v.dateTime || '', qualifiers: quals }
     }
