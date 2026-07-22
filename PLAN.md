@@ -30,6 +30,7 @@ A **public accountability / transparency tool** for Water District 34 (Big Lost 
 - [x] **A+B:** staged first load + dry-reach seniors table/CSV
 - [x] **C:** guided Story steps (7 geography-only steps)
 - [x] **D:** mobile bottom-sheet + tap targets
+- [x] **POD-first default:** Explore lands with ★ click → purple diversion↔field lines (core map move)
 - [ ] Later: curtailment / live USGS / fresher ETL (E)
 
 ---
