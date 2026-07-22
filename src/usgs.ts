@@ -173,3 +173,43 @@ export function mergedYearSeries(
 export function cfsToAfPerYear(cfs: number): number {
   return cfs * 724.46
 }
+
+export interface InstantaneousCfs {
+  cfs: number
+  dateTime: string
+  qualifiers: string
+}
+
+const ivCache = new Map<string, { at: number; value: InstantaneousCfs | null }>()
+const IV_TTL_MS = 5 * 60 * 1000
+
+/**
+ * Latest instantaneous discharge (cfs) from USGS NWIS IV JSON.
+ * Returns null when the site has no current 00060 value (common for discontinued gages).
+ */
+export async function fetchInstantaneousCfs(siteNo: string): Promise<InstantaneousCfs | null> {
+  const cached = ivCache.get(siteNo)
+  if (cached && Date.now() - cached.at < IV_TTL_MS) return cached.value
+
+  const url =
+    'https://waterservices.usgs.gov/nwis/iv/?format=json' +
+    `&sites=${encodeURIComponent(siteNo)}&parameterCd=00060`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`NWIS IV: HTTP ${res.status}`)
+  const data = await res.json()
+  const series = data?.value?.timeSeries?.[0]
+  const v = series?.values?.[0]?.value?.[0]
+  let result: InstantaneousCfs | null = null
+  if (v && v.value != null && v.value !== '') {
+    const cfs = parseFloat(v.value)
+    if (isFinite(cfs)) {
+      const quals = Array.isArray(v.qualifiers)
+        ? v.qualifiers.map((q: { qualifierCode?: string }) => q.qualifierCode).filter(Boolean).join(', ')
+        : ''
+      result = { cfs, dateTime: v.dateTime || '', qualifiers: quals }
+    }
+  }
+  ivCache.set(siteNo, { at: Date.now(), value: result })
+  return result
+}
+

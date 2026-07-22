@@ -237,6 +237,16 @@ async function bootstrap() {
   }
 
   populateReachSelect(store)
+
+  const ensureCanalsVisible = () => {
+    syncLayerCheckbox('layer-hydro', true)
+    void staticLayers.loadHeavy().then(() => {
+      const group = staticLayers.groups.hydro
+      if (group && !map.hasLayer(group)) map.addLayer(group)
+      updateLegendNow()
+    })
+  }
+
   wireSidebar({
     refreshData,
     setLayerEnabled: (key, on) => {
@@ -271,8 +281,10 @@ async function bootstrap() {
     },
     setFlowEra: era => staticLayers.setFlowEra(era),
     onHighlightMode: mode => {
-      if (mode === 'transfers') showTransfersOverview(store)
-      else if (mode === 'conflict') showConflictsOverview(store)
+      if (mode === 'transfers') {
+        ensureCanalsVisible()
+        showTransfersOverview(store)
+      } else if (mode === 'conflict') showConflictsOverview(store)
       else if (mode === 'conjunctive') showConjunctivePanel(store)
     },
     onUiMode: mode => {
@@ -293,6 +305,11 @@ async function bootstrap() {
     showAppropriation: () => showAppropriationPanel(store),
     showRiverShrink: () => showReachLossPanel(),
     showDryReach: () => showDryReachSeniorsPanel(store),
+    showMovedFarther: () => {
+      ensureCanalsVisible()
+      showTransfersOverview(store)
+    },
+    showConjunctive: () => showConjunctivePanel(store),
     setOwnerHighlight: owner => {
       state.ownerHighlight = owner
       state.selectedWRs = new Set()
@@ -337,8 +354,12 @@ async function bootstrap() {
     },
     showRiverShrink: () => showReachLossPanel(),
     showDryReach: () => showDryReachSeniorsPanel(store),
-    showTransfers: () => showTransfersOverview(store),
+    showTransfers: () => {
+      ensureCanalsVisible()
+      showTransfersOverview(store)
+    },
     showConjunctive: () => showConjunctivePanel(store),
+    ensureCanalsVisible,
     onStepChange: i => {
       setStoryStepForHash(i)
       updatePermalink()

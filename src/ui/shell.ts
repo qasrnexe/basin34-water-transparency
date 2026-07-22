@@ -34,7 +34,7 @@ export function renderShell() {
             <p class="story-perf-hint">Tap a ★ on the map anytime — purple lines show where that right diverts and where it can be used.</p>
             <div class="story-nav">
               <button type="button" id="story-prev" class="story-nav-btn" disabled>← Back</button>
-              <span id="story-step-counter" class="story-step-counter">1 / 7</span>
+              <span id="story-step-counter" class="story-step-counter">1 / 5</span>
               <button type="button" id="story-next" class="story-nav-btn">Next →</button>
             </div>
             <button type="button" id="story-panel-btn" class="story-panel-btn hidden">Open details</button>
@@ -46,11 +46,10 @@ export function renderShell() {
           <div class="preset-grid">
             <button type="button" class="preset-btn" data-preset="dry-reach">Dry-reach seniors + CSV</button>
             <button type="button" class="preset-btn" data-preset="river-shrink">River shrink</button>
+            <button type="button" class="preset-btn" data-preset="transfers">Water moved farther + CSV</button>
+            <button type="button" class="preset-btn" data-preset="then-now">Then vs now</button>
             <button type="button" class="preset-btn" data-preset="senior">Senior downstream</button>
             <button type="button" class="preset-btn" data-preset="conjunctive">GW boom vs seniors</button>
-            <button type="button" class="preset-btn" data-preset="transfers">Potential transfers</button>
-            <button type="button" class="preset-btn" data-preset="arco">Lower river / Arco</button>
-            <button type="button" class="preset-btn" data-preset="then-now">Then vs now</button>
           </div>
 
           <h2>Then vs now</h2>
@@ -72,44 +71,7 @@ export function renderShell() {
         </section>
 
         <section id="explore-panel" class="mode-panel hidden">
-          <h2>Analysis view</h2>
-          <select id="highlight-mode" class="w-full text-xs border border-[var(--border)] rounded px-1 py-0.5 mb-1">
-            <option value="none">None — show everything</option>
-            <option value="senior-downstream">Senior rights downstream (pre-1950)</option>
-            <option value="junior-dev">Junior development (post-1980, high rate)</option>
-            <option value="transfers">Potential transfers (POD far from POU)</option>
-            <option value="conflict">Potential conflicts (senior down vs. new up)</option>
-            <option value="conjunctive">Conjunctive: GW boom vs. senior surface</option>
-            <option value="high-rate">High diversion rates</option>
-          </select>
-          <div id="mode-hint" class="text-[10px] text-[var(--text-muted)] leading-tight mb-1"></div>
-          <div class="text-xs mb-1">
-            High-rate threshold:
-            <input type="number" id="high-rate-threshold" value="5" style="width:44px;font-size:0.7rem"> cfs
-          </div>
-          <label class="block text-xs mb-1">Focus by reach (at/downstream):</label>
-          <select id="reach-select" class="text-xs w-full mb-1 border border-[var(--border)] rounded px-1 py-0.5">
-            <option value="">— Whole basin —</option>
-          </select>
-          <label class="block text-xs"><input type="checkbox" id="place-of-use-mode" checked> Show all Place of Use fills</label>
-          <div class="text-[10px] text-[var(--text-muted)] leading-tight mt-0.5">
-            Click a POD ★ anytime for purple field outlines + dashed diversion lines (works even if this is off).
-          </div>
-          <div class="text-[10px] text-[var(--text-muted)] leading-tight mt-0.5">
-            Click a field (POU), POD ★, or gage for details. Esc or map background clears selection.
-          </div>
-          <button id="dry-reach-btn" class="text-xs px-2 py-1 mt-1 w-full border border-[var(--border)] rounded hover:bg-[var(--border)]">
-            Downstream seniors on a dry reach + CSV
-          </button>
-          <button id="appropriation-btn" class="text-xs px-2 py-1 mt-1 w-full border border-[var(--border)] rounded hover:bg-[var(--border)]">
-            Appropriation vs. supply over time
-          </button>
-          <button id="river-shrink-btn" class="text-xs px-2 py-1 mt-1 w-full border border-[var(--border)] rounded hover:bg-[var(--border)]">
-            River shrink: Mackay → Moore → Arco
-          </button>
-          <button id="timeline-btn" class="text-xs px-2 py-1 mt-1 w-full border border-[var(--border)] rounded hover:bg-[var(--border)]">
-            Development through time
-          </button>
+          <p class="explore-hint">Tap a ★ anytime for purple diversion↔field lines.</p>
 
           <h2>Owner search</h2>
           <input id="search" type="text" placeholder="Owner name (partial match)…"
@@ -123,8 +85,12 @@ export function renderShell() {
             <div id="owner-stats" class="text-[9px] leading-tight"></div>
           </div>
 
-          <h2>Legend</h2>
-          <div id="main-legend" class="text-xs p-2 border border-[var(--border)] rounded bg-[var(--panel)] mb-2 min-h-[48px]"></div>
+          <h2>Basemap</h2>
+          <div class="flex gap-1 mb-1" id="basemap-switcher">
+            <button type="button" class="basemap-btn" data-basemap="osm">Map</button>
+            <button type="button" class="basemap-btn active" data-basemap="satellite">Satellite</button>
+            <button type="button" class="basemap-btn" data-basemap="hybrid">Hybrid</button>
+          </div>
 
           <h2>Layers</h2>
           <div class="layer-item"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="layer-pods" checked /> <span>PODs / water rights ★</span></label></div>
@@ -133,49 +99,95 @@ export function renderShell() {
             <label class="block"><input type="checkbox" id="well-hide-domestic" checked> Hide domestic &amp; unlabeled</label>
             <label class="block"><input type="checkbox" id="well-focus-irrigation"> Irrigation / commercial only</label>
           </div>
-          <div class="layer-item"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="layer-boundary" checked /> <span>Basin boundary</span></label></div>
-          <div class="layer-item"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="layer-riparian" checked /> <span>Riparian areas (FWS NWI)</span></label></div>
-          <div class="layer-item"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="layer-hydro" checked /> <span>Canals &amp; pipelines (NHD)</span></label></div>
-          <div class="layer-item"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="layer-diversions" checked /> <span>Named diversions ◆ (≥5 cfs)</span></label></div>
-          <div class="layer-item"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="layer-gages" checked /> <span>Stream gages</span></label></div>
           <div class="layer-item"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="layer-flowExtent" checked /> <span>River channel &amp; sinks (NHD)</span></label></div>
-          <div class="layer-item"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="layer-reaches" checked /> <span>Admin reaches</span></label></div>
+          <div class="layer-item"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="layer-hydro" checked /> <span>Canals &amp; pipelines (NHD)</span></label></div>
 
-          <h2>POD filters</h2>
-          <div class="text-xs" style="line-height:1.4">
-            <label>Color by:
-              <select id="pod-color-mode" class="text-xs border border-[var(--border)] rounded">
-                <option value="source">Source (GW / surface)</option>
-                <option value="priority">Priority year (seniority)</option>
+          <h2>Insight receipts</h2>
+          <div class="insight-grid">
+            <button type="button" id="dry-reach-btn" class="insight-btn">Downstream seniors + CSV</button>
+            <button type="button" id="moved-farther-btn" class="insight-btn">Water moved farther + CSV</button>
+            <button type="button" id="river-shrink-btn" class="insight-btn">River shrink chart</button>
+            <button type="button" id="conjunctive-btn" class="insight-btn">GW boom vs seniors</button>
+          </div>
+          <label class="block text-xs mt-2 mb-0.5">Map emphasis</label>
+          <select id="highlight-mode" class="w-full text-xs border border-[var(--border)] rounded px-1 py-0.5 mb-1">
+            <optgroup label="Primary">
+              <option value="none">None — show everything</option>
+              <option value="senior-downstream">Senior rights downstream (pre-1950)</option>
+              <option value="transfers">Water moved farther (POD far from POU)</option>
+              <option value="conjunctive">Conjunctive: GW boom vs. senior surface</option>
+            </optgroup>
+            <optgroup label="Advanced analyses">
+              <option value="junior-dev">Junior development (post-1980, high rate)</option>
+              <option value="conflict">Potential conflicts (senior down vs. new up)</option>
+              <option value="high-rate">High diversion rates</option>
+            </optgroup>
+          </select>
+          <div id="mode-hint" class="text-[10px] text-[var(--text-muted)] leading-tight mb-1"></div>
+
+          <h2>Legend</h2>
+          <div id="main-legend" class="text-xs p-2 border border-[var(--border)] rounded bg-[var(--panel)] mb-2 min-h-[48px]"></div>
+
+          <details id="explore-advanced" class="explore-advanced">
+            <summary>Advanced</summary>
+            <div class="explore-advanced-body">
+              <div class="text-xs mb-1">
+                High-rate threshold:
+                <input type="number" id="high-rate-threshold" value="5" style="width:44px;font-size:0.7rem"> cfs
+              </div>
+              <label class="block text-xs mb-1">Focus by reach (at/downstream):</label>
+              <select id="reach-select" class="text-xs w-full mb-1 border border-[var(--border)] rounded px-1 py-0.5">
+                <option value="">— Whole basin —</option>
               </select>
-            </label><br>
-            <label><input type="checkbox" id="pod-filter-gw" checked> Groundwater</label>
-            <label class="ml-2"><input type="checkbox" id="pod-filter-surf" checked> Surface</label><br>
-            <span class="font-medium">Eras:</span>
-            <label class="ml-1"><input type="checkbox" id="era-pre1950" checked> &lt;1950</label>
-            <label class="ml-1"><input type="checkbox" id="era-mid" checked> 1950–2000</label>
-            <label class="ml-1"><input type="checkbox" id="era-post2000" checked> &gt;2000</label><br>
-            Years: <input type="number" id="pod-min-year" value="1800" style="width:52px;font-size:0.7rem"> –
-            <input type="number" id="pod-max-year" value="2026" style="width:52px;font-size:0.7rem">
-          </div>
+              <label class="block text-xs"><input type="checkbox" id="place-of-use-mode" checked> Show all Place of Use fills</label>
+              <div class="text-[10px] text-[var(--text-muted)] leading-tight mt-0.5 mb-2">
+                Click a POD ★ anytime for purple field outlines + dashed diversion lines (works even if this is off).
+              </div>
 
-          <h2>Then vs now: where the river ends</h2>
-          <div class="text-xs filter-group">
-            <label class="flex items-center gap-1"><input type="radio" name="era" value="historical" checked /> Then — river reached the sinks near Howe</label>
-            <label class="flex items-center gap-1"><input type="radio" name="era" value="recent" /> Now — usually dry below Moore</label>
-          </div>
-          <div class="text-[10px] text-[var(--text-muted)] leading-tight mt-0.5">
-            Split at the Moore diversion (USGS 13132100). Click gages for full flow records.
-          </div>
+              <button id="appropriation-btn" class="text-xs px-2 py-1 mt-1 w-full border border-[var(--border)] rounded hover:bg-[var(--border)]">
+                Appropriation vs. supply over time
+              </button>
+              <button id="timeline-btn" class="text-xs px-2 py-1 mt-1 w-full border border-[var(--border)] rounded hover:bg-[var(--border)]">
+                Development through time
+              </button>
 
-          <h2>Basemap</h2>
-          <div class="flex gap-1 mb-1" id="basemap-switcher">
-            <button type="button" class="basemap-btn" data-basemap="osm">Map</button>
-            <button type="button" class="basemap-btn active" data-basemap="satellite">Satellite</button>
-            <button type="button" class="basemap-btn" data-basemap="hybrid">Hybrid</button>
-          </div>
+              <h3 class="adv-h">More layers</h3>
+              <div class="layer-item"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="layer-boundary" checked /> <span>Basin boundary</span></label></div>
+              <div class="layer-item"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="layer-riparian" checked /> <span>Riparian areas (FWS NWI)</span></label></div>
+              <div class="layer-item"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="layer-diversions" checked /> <span>Named diversions ◆ (≥5 cfs)</span></label></div>
+              <div class="layer-item"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="layer-gages" checked /> <span>Stream gages</span></label></div>
+              <div class="layer-item"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="layer-reaches" checked /> <span>Admin reaches</span></label></div>
 
-          <button id="reset-all" class="text-xs px-2 py-1 mt-2 w-full border border-[var(--border)] rounded hover:bg-[var(--border)]">Reset all filters &amp; highlights</button>
+              <h3 class="adv-h">POD filters</h3>
+              <div class="text-xs" style="line-height:1.4">
+                <label>Color by:
+                  <select id="pod-color-mode" class="text-xs border border-[var(--border)] rounded">
+                    <option value="source">Source (GW / surface)</option>
+                    <option value="priority">Priority year (seniority)</option>
+                  </select>
+                </label><br>
+                <label><input type="checkbox" id="pod-filter-gw" checked> Groundwater</label>
+                <label class="ml-2"><input type="checkbox" id="pod-filter-surf" checked> Surface</label><br>
+                <span class="font-medium">Eras:</span>
+                <label class="ml-1"><input type="checkbox" id="era-pre1950" checked> &lt;1950</label>
+                <label class="ml-1"><input type="checkbox" id="era-mid" checked> 1950–2000</label>
+                <label class="ml-1"><input type="checkbox" id="era-post2000" checked> &gt;2000</label><br>
+                Years: <input type="number" id="pod-min-year" value="1800" style="width:52px;font-size:0.7rem"> –
+                <input type="number" id="pod-max-year" value="2026" style="width:52px;font-size:0.7rem">
+              </div>
+
+              <h3 class="adv-h">Then vs now: where the river ends</h3>
+              <div class="text-xs filter-group">
+                <label class="flex items-center gap-1"><input type="radio" name="era" value="historical" checked /> Then — river reached the sinks near Howe</label>
+                <label class="flex items-center gap-1"><input type="radio" name="era" value="recent" /> Now — usually dry below Moore</label>
+              </div>
+              <div class="text-[10px] text-[var(--text-muted)] leading-tight mt-0.5">
+                Split at the Moore diversion (USGS 13132100). Click gages for live CFS + full records.
+              </div>
+
+              <button id="reset-all" class="text-xs px-2 py-1 mt-2 w-full border border-[var(--border)] rounded hover:bg-[var(--border)]">Reset all filters &amp; highlights</button>
+            </div>
+          </details>
 
           <div class="disclaimer mt-2 text-[9px]">
             Neutral public data view (IDWR + USGS). Not legal advice — use official sources for decisions.

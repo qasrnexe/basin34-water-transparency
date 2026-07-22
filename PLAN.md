@@ -2,7 +2,7 @@
 
 **Repo:** `qasrnexe/basin34-water-transparency`  
 **Live:** https://water.bnm.farm (private — same family Caddy login as farm.bnm.farm)  
-**Deploy:** `~/projects/tv-remote/homelab/scripts/deploy-water.sh` on the media box  
+**Deploy:** rebuild `dist/` only on the media box (`npm run build`). See `tv-remote/homelab/AGENT_COORDINATION.md`.
 
 **Purpose:** Single source of truth. On the media-box agent say: “read PLAN.md and do the next build slice.”
 
@@ -21,150 +21,106 @@ A **public accountability / transparency tool** for Water District 34 (Big Lost 
 
 **Tone:** Neutral, sourced. Geometric / priority / gage proxies — not court findings.
 
+**Product rule:** at most **three primary insight receipts**:
+
+1. River shrinks / goes dry below Moore  
+2. Downstream seniors on that dry reach (CSV)  
+3. Water authorized far from / off the corridor — “moved farther” (CSV)
+
+Everything else is Advanced or Story color — not a peer lens. **Do not add a seventh exclusive `HighlightMode`.**
+
 ---
 
 ## Current state (2026-07-22)
 
-- [x] Live at water.bnm.farm (private family login); POD-first Explore default; calm stars; dry-reach CSV; Story; mobile sheet
-- [x] F0 data refresh (ETL re-run; see manifest `asOf`)
-- [ ] F1 “Water moved farther” / lined-canals story still half-told
-- [ ] Explore sidebar still dense
+- [x] Live at water.bnm.farm; POD-first Explore; calm stars; dry-reach CSV; mobile sheet
+- [x] F0 data refresh (`asOf` 2026-07-22)
+- [x] F1 — Water moved farther rename + CSV + honest copy; Advanced optgroup; canals auto-show
+- [x] F2 — Explore nested: hint / owner / basemap / short layers / insight receipts / Advanced collapsed
+- [x] F3 — Story trimmed to 5 steps (three receipts)
+- [x] F4 — Evidence research: no clean public east/west designation polygons; claim stays narrative + satellite (see below)
+- [x] F5 — Live USGS instantaneous CFS on gage click (annual history retained)
 
 ---
 
-## Build order (next)
+## Build order
 
 ```text
-F0. Data refresh (re-run ETL, bump manifest)           ← DONE (this pass)
-F1. “Water moved farther” lens (lined canals + transfers + new ground)
-F2. Sidebar IA (insight-first, power tools nested)
-F3. Optional: mapped waterbodies / aerial change cues
-E.  Later: WD34 curtailment/accounting, live USGS
+F0. Data refresh                                      ← DONE
+F1. Consolidate Explore + honest “moved farther”      ← DONE
+F2. Sidebar IA (insight-first, Advanced nested)       ← DONE
+F3. Story trim 7 → 5                                  ← DONE
+F4. Evidence for recent lined canals                  ← researched; no new UI layer
+F5. Live USGS instantaneous on gages                  ← DONE (chose live USGS over curtailment)
 ```
 
 ---
 
 ### F0 — Data freshness
 
-**Do**
-
-1. Re-run `scripts/etl/fetch_idwr_pods_wells.py` (pods, wells, pou)
-2. Re-run `scripts/etl/fetch_nhd_canals.py` + `fetch_nhd_mainstem.py` + `fetch_nwi_riparian.py`
-3. Commit updated GeoJSON + `manifest.json` with new `asOf`
-4. Spot-check: dry-reach count, transfer count, canal/pipeline segment counts before/after
-
-**Caveat:** NHD and IDWR lag real dirt work. Brand-new lined canals may show on satellite weeks/months before GIS. The app should say **“data as of …”** prominently and never imply live construction inventory.
-
-**Done when:** manifest date is current; app data-as-of chip matches; no silent count regressions.
+Re-run IDWR + NHD canals/mainstem/sinks + NWI; `scripts/etl/fetch_nhd_canals.py`; bump manifest.  
+**Caveat:** GIS lags dirt work. Always show **data as of**.
 
 ---
 
-### F1 — Story: lined canals, water moved farther ← NEXT
+### F1 — Consolidate + honest “moved farther”
 
-**Local reality (product language):** The egregious diversions that created “east side of the river” / “west side of the river” designations are **lined canals** carrying water to **new ground** broken out in the last ~10–15 years — not “lined ponds.” Prefer that wording in Story, captions, and lens copy.
+- Renamed user-facing “Potential transfers” → **Water moved farther** (mode id stays `transfers`)
+- Ranked table + owner filter + CSV (`src/movedFarther.ts`) matching dry-reach pattern
+- Honest copy: satellite for lined canals / east–west new ground; GIS = POD↔POU distance + off-corridor geometry — **not** “built since ~2010”
+- Auto-show NHD canals when this lens is on
+- Demoted `junior-dev` / `conflict` / `high-rate` under Advanced analyses optgroup
 
-**What we already have (underused)**
+---
 
-| Signal | Layer / lens | Honesty |
+### F2 — Sidebar IA
+
+Explore cold-open:
+
+- Hint + owner search + basemap + short layers (POD / wells / channel / canals)
+- Insight receipt buttons + primary map-emphasis select
+- **Advanced** `<details>`: rate/reach/POU fills, appropriation & timeline, extra layers, POD filters, then/now, reset
+
+---
+
+### F3 — Story trim
+
+Five steps: overview → then/now → river shrink → dry-reach seniors → water moved farther.  
+GW boom / Arco standalone steps folded into Explore / dry-reach framing.
+
+---
+
+### F4 — Evidence for *recent* lined canals (research note)
+
+**Finding (2026-07-22):** No clean public IDWR / WD34 **east-side / west-side of the river** designation polygons turned up for ETL. Available signals:
+
+| Source | What it is | Enough for UI? |
 |---|---|---|
-| POD far from POU | Transfers analysis + purple connectors | Geometric proxy, not a filing |
-| POU off corridor | “New ground” orange fills in transfers | Geometric vs NHD+NWI corridor |
-| Canal / pipe geometry | `nhd-canals-pipelines` (canal/ditch + pipeline fcodes) | NHD inventory; incomplete & lagged; does not mark “lined” |
-| Named diversions | Diversions layer | Aggregated from POD rates |
+| NHD canals/pipelines | Geometry only; no “lined” | Already loaded — not a liner inventory |
+| Geometric “off corridor” | ~282 rights; **mostly pre-1950 priority** | Useful proxy; **must not** mean “last 10–15 years” |
+| BLR Ground Water District division map | Divisions 1–7 (not east/west of river) | Skip for this claim |
+| IDWR Open Data / water districts hub | Admin layers exist generally; no WD34 E/W designation layer found | Revisit if IDWR publishes one |
 
-**What we barely have**
+**Decision:** Ship **no new F4 map layer**. Keep local reality in Story/panel copy (lined canals on satellite). Re-open only if a sourced polygon or transfer-filing table appears.
 
-- Explicit “lined” attribute: not in NHD; satellite / local knowledge for Story captions
-- Clean east/west-of-river designation polygons from IDWR (if they exist as public GIS — investigate after F0)
-- “New this year” construction: not in these extracts
-
-**Recommended product shape (one lens, not five new toggles)**
-
-**Lens name:** **Water moved farther** (neutral)
-
-1. **Map:** NHD canals emphasized for the east/west new-ground story; pipelines still available; transfers + new-ground POUs on; optional POD↔POU lines for transfer set only  
-2. **Panel:** ranked table + CSV — distance POD→POU, corridor distance, owner, year, cfs — same accountability pattern as dry-reach  
-3. **Story step:** one guided step after dry-reach / GW: “Lined canals and re-authorization moved water onto new ground east and west of the river — here is the public-geometry evidence”  
-4. **Satellite:** keep as basemap; caption points at lined canal corridors visually; do **not** invent a liner inventory layer
-
-**Possible later data (only if F0 + F1 still feel thin)**
-
-- Admin / diversion-district polygons if IDWR publishes east/west designations  
-- NHD waterbodies (reservoir/pond fcodes) as optional quiet layer — separate from lined-canal story  
-- NAIP / recent imagery swipe (heavy; optional)  
-- IDWR transfer / water-supply bank tables if a clean public extract exists  
-
-**Tone:** “moved farther / off corridor / lined canal to new ground” — not “stolen.”
+**Parked (old F3 toys):** NHD pond polygons, NAIP swipe, fake change detection — only if a meeting need appears.
 
 ---
 
-### F2 — Sidebar easier without losing insight
+### F5 — Harder receipts: live USGS
 
-**Principle:** one primary path stays sacred — **tap ★ → purple diversion↔fields**. Everything else is a labeled lens.
+Chose **live / fresher USGS instantaneous discharge** on gage click (`fetchInstantaneousCfs` in `src/usgs.ts`) over curtailment/accounting for this pass — same gage story, higher evidence, no new fashion layers.
 
-**Proposed IA**
-
-```text
-Explore (default)
-├── Always visible
-│   ├── Hint: tap ★ for purple links
-│   ├── Owner search
-│   ├── Basemap
-│   └── Layers: POD ★ / wells / channel / pipes (short list)
-├── Insight lenses (one active) — big buttons / select
-│   ├── Downstream seniors + CSV
-│   ├── Water moved farther + CSV   ← new
-│   ├── River shrink chart
-│   ├── GW boom vs seniors
-│   └── Development timeline
-└── Advanced (collapsed)
-    ├── Reach filter, year eras, rate threshold
-    ├── Show all POU fills
-    ├── Riparian / admin reaches / diversions
-    └── Reset
-```
-
-Story mode stays the guided tour; Explore is the workshop. Do **not** delete analysis views — nest them.
-
-**Mobile:** keep bottom sheet; Insight lenses in the peek; Advanced only when expanded.
-
----
-
-### F3 — Optional waterbody / change cues (only after F0–F2)
-
-- Optional NHD reservoir/pond polygons as a quiet layer (“Mapped waterbodies — NHD”) — separate from the lined-canal / east–west story  
-- If useful: a “compare eras” note pointing at satellite + then/now channel, not a fake change-detection product  
-
----
-
-### E — Later (highest evidence, hardest data)
-
-- WD34 curtailment / accounting (“who shut off when”)
-- Live USGS instantaneous values
-- Fresher ETL on a calendar (quarterly?)
+**Still later:** WD34 curtailment / “who shut off when” (hardest data).
 
 ---
 
 ## Working loop
 
-1. Talk to **media-box** water agent (stay in `basin34-water-transparency`; rebuild `dist/` only — see `tv-remote/homelab/AGENT_COORDINATION.md`)  
-2. Agent builds, `git push` `qasrnexe/basin34-water-transparency`  
-3. Rebuild water `dist/` for https://water.bnm.farm  
+1. Stay in `basin34-water-transparency`; rebuild `dist/` only  
+2. Do not checkout other branches in `tv-remote` or recreate Caddy from a stale tree  
+3. After each slice: commit, push, `npm run build`
 
----
+## Success bar
 
-## Success criteria
-
-In under five minutes **on a phone**, a visitor can:
-
-1. Tap a ★ and see purple diversion↔field lines  
-2. See the lower river dry in the modern record  
-3. Open ranked **dry-reach seniors** CSV  
-4. Open ranked **water moved farther** evidence (pipes + off-corridor POUs) without drowning in sidebar chrome  
-5. Trust the **data-as-of** date  
-
-### Phone / map notes
-
-- POD-first Explore default; calm stars (no glow)  
-- Selection purple lines work even when “all POU fills” are off  
-- Heavy layers (NWI, full POU fills, canals) stay deferred until needed  
+In &lt;5 minutes on a phone: tap ★ → purple links; see dry channel below Moore; download dry-reach CSV; open moved-farther CSV with honest methodology; see live CFS on a reporting gage; see data-as-of chip.

@@ -1,4 +1,4 @@
-import { DISTRICT_POU_KM2, NEW_GROUND_KM, CONFLICT_CORRIDOR_KM, type DataStore } from '../data'
+import { DISTRICT_POU_KM2, NEW_GROUND_KM, CONFLICT_CORRIDOR_KM, TRANSFER_DIST_KM, type DataStore } from '../data'
 import type { GeoFeature, PodRecord, WellRecord } from '../types'
 import { conflictJunior, conflictSenior } from '../filters'
 import { state } from '../state'
@@ -12,6 +12,12 @@ import {
   downloadCsv,
   listDryReachSeniors,
 } from '../dryReach'
+import {
+  MOVED_FARTHER_METHODOLOGY,
+  listMovedFarther,
+  movedFartherToCsv,
+} from '../movedFarther'
+import { fetchInstantaneousCfs } from '../usgs'
 
 /** Width for charts rendered inside the lightbox modal. */
 function modalChartW(): number {
@@ -141,22 +147,51 @@ export function showPouGroupDetails(wrs: Set<string>, clicked: GeoFeature, store
   open(html)
 }
 
-/** Gage details: lightbox modal with a large live flow-history chart (USGS NWIS). */
+/** Gage details: live instantaneous CFS (when available) + annual flow-history chart. */
 export function showGageDetails(feature: GeoFeature) {
   const p = feature.properties || {}
   let html = `<h3 style="margin-top:0">${p.name || 'Stream gage'}</h3>`
   if (p.site_no) html += `<div class="badge">USGS ${p.site_no}</div>`
   if (p.notes) html += `<div style="margin:6px 0;font-size:0.85em">${p.notes}</div>`
   if (p.historical_summary) html += `<div style="margin:6px 0;font-size:0.85em"><em>${p.historical_summary}</em></div>`
-  html += `<div id="gage-chart" style="margin:8px 0;font-size:0.8em;color:var(--text-muted)">Loading flow history from USGS NWIS…</div>`
+  html += `<div id="gage-live" style="margin:8px 0;padding:8px 10px;border-left:3px solid #0ea5e9;background:rgba(14,165,233,0.08);font-size:0.9em">Loading current flow…</div>`
+  html += `<div id="gage-chart" style="margin:8px 0;font-size:0.8em;color:var(--text-muted)">Loading annual flow history from USGS NWIS…</div>`
   if (p.site_no && EXTENT_CHAIN_SITES.has(p.site_no)) {
-    html += `<button class="zoom-btn" data-show-shrink style="margin:4px 0">📉 View step-down: Mackay → Moore → Arco</button><br>`
+    html += `<button class="zoom-btn" data-show-shrink style="margin:4px 0">View step-down: Mackay → Moore → Arco</button><br>`
   }
   if (p.url) html += `<a href="${p.url}" target="_blank" rel="noopener">Open full USGS page →</a>`
-  html += `${FOOT}Annual mean discharge per calendar year, live from the USGS NWIS statistics service (approved daily data). Hover the chart for per-year values. Neutral visualization only.</div>`
+  html += `${FOOT}Current flow is the latest USGS NWIS instantaneous discharge (00060) when the site reports it. Annual chart uses approved calendar-year means. Neutral visualization only.</div>`
   openModal(html)
 
-  if (!p.site_no) return
+  if (!p.site_no) {
+    const live = document.getElementById('gage-live')
+    if (live) live.textContent = 'No USGS site number on this gage.'
+    return
+  }
+
+  fetchInstantaneousCfs(p.site_no)
+    .then(iv => {
+      const el = document.getElementById('gage-live')
+      if (!el) return
+      if (!iv) {
+        el.innerHTML = `No instantaneous discharge reported right now — check the <a href="${p.url || `https://waterdata.usgs.gov/nwis/uv?site_no=${p.site_no}`}" target="_blank" rel="noopener">USGS page</a> or the annual chart below.`
+        return
+      }
+      const when = iv.dateTime
+        ? new Date(iv.dateTime).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+        : 'time unknown'
+      el.innerHTML =
+        `<strong style="font-size:1.15em;color:#0369a1">${iv.cfs.toFixed(1)} cfs</strong> ` +
+        `<span style="color:var(--text-muted)">current · ${when}</span>` +
+        (iv.qualifiers ? `<div style="font-size:0.8em;color:var(--text-muted);margin-top:2px">${iv.qualifiers}</div>` : '')
+    })
+    .catch(() => {
+      const el = document.getElementById('gage-live')
+      if (el) {
+        el.innerHTML = `Could not load live flow — <a href="${p.url || `https://waterdata.usgs.gov/nwis/uv?site_no=${p.site_no}`}" target="_blank" rel="noopener">view on USGS</a>.`
+      }
+    })
+
   fetchGageFlowHistory(p.site_no)
     .then(history => renderGageChart(p.site_no, history, p))
     .catch(() => {
@@ -350,36 +385,112 @@ function conflictCard(rec: PodRecord): string {
   return html
 }
 
-/** Ranked list of potential transfers (largest POD↔POU separations). */
+/** Ranked table + CSV: water moved farther (geometric POD↔POU / off-corridor proxy). */
 export function showTransfersOverview(store: DataStore) {
-  const entries = [...store.transferDistKm.entries()].sort((a, b) => b[1] - a[1])
-  const newGroundCount = store.newGroundWRs.size
-  let html = `<h3 style="margin-top:0">Potential transfers</h3>`
-  html += `<div style="font-size:0.85em;margin-bottom:6px">${entries.length} rights have a point of diversion more than 8 km from their authorized place of use — a proxy for moved use. ` +
-    `<span style="color:var(--text-muted)">IDWR only serves the <em>current</em> POU geometry; original (pre-transfer) places of use require IDWR transfer records (linked in each right's report).</span></div>`
-  if (newGroundCount > 0) {
-    html += `<div style="font-size:0.85em;margin:6px 0;padding:4px 8px;border-left:3px solid #ea580c;background:rgba(234,88,12,0.08)">` +
-      `<strong style="color:#c2410c">${newGroundCount} of ${entries.length} flagged transfers now irrigate land outside the river's natural corridor</strong> ` +
-      `(POU more than ${NEW_GROUND_KM} km from both the NHD river channel and any NWI riparian area — solid orange fill on the map).</div>`
+  const rows = listMovedFarther(store)
+  const offCount = rows.filter(r => r.offCorridor).length
+  const totalCfs = rows.reduce((s, r) => s + r.rate, 0)
+
+  let html =
+    `<h2 style="margin-top:0">Water moved farther</h2>` +
+    `<p style="font-size:0.85em;line-height:1.45;color:var(--text-muted)">${MOVED_FARTHER_METHODOLOGY}</p>` +
+    `<p style="font-size:0.9em"><strong>${rows.length}</strong> rights · ` +
+    `<strong>${offCount}</strong> off-corridor · ` +
+    `<strong>${totalCfs.toFixed(1)}</strong> cfs combined max diversion</p>` +
+    `<div style="font-size:0.85em;margin:8px 0;padding:6px 10px;border-left:3px solid #ea580c;background:rgba(234,88,12,0.08)">` +
+    `<strong style="color:#c2410c">On satellite:</strong> look for lined canals carrying water east or west of the river onto newer ground. ` +
+    `Orange POU fills are a geometric off-corridor flag — many flagged rights have senior priority dates; ` +
+    `this is <em>not</em> a count of canals built in the last 10–15 years, and NHD does not mark liners.</div>` +
+    `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0">` +
+    `<button type="button" id="moved-farther-csv" class="zoom-btn">Download CSV</button>` +
+    `<label style="font-size:0.8em;display:flex;align-items:center;gap:6px;flex:1;min-width:180px">` +
+    `Filter owner ` +
+    `<input id="moved-farther-owner-filter" type="search" placeholder="Type any owner name…" ` +
+    `style="flex:1;min-width:140px;padding:6px 8px;border:1px solid var(--border-strong);border-radius:4px;background:var(--control-bg);color:var(--text)" />` +
+    `</label>` +
+    `</div>` +
+    `<p id="moved-farther-filter-status" style="font-size:0.8em;color:var(--text-muted);min-height:1.2em"></p>`
+
+  if (!rows.length) {
+    html += `<p>No POD↔POU distance flags yet. Wait for Place of Use enrichment to finish, then retry.</p>`
+    openModal(html)
+    return
   }
-  for (const [wr, dist] of entries.slice(0, 25)) {
-    const rec = store.podsByWR.get(wr)?.[0]
-    const corridorD = store.corridorDistKm.get(wr)
-    html += `<div class="wr-card"><div class="wr-card-head"><strong>${wr}</strong>` +
-      (rec?.year != null ? ` <span class="badge ${rec.year < 1950 ? 'badge-senior' : rec.year < 2000 ? 'badge-mid' : 'badge-junior'}">${rec.year}</span>` : '') +
-      ` <span class="badge badge-transfer">${dist.toFixed(1)} km</span>` +
-      (store.newGroundWRs.has(wr)
-        ? ` <span class="badge badge-newground" title="POU is ${corridorD?.toFixed(1)} km from the natural river corridor">new ground · ${corridorD?.toFixed(1)} km off-corridor</span>`
-        : '') +
-      `</div>`
-    if (rec?.owner) html += `${rec.owner}<br>`
-    if (rec?.source) html += `<span style="color:var(--text-muted)">${rec.source}</span><br>`
-    html += `<button class="zoom-btn" data-zoom-wr="${wr}">Zoom to POD + POU</button></div>`
+
+  html += `<div style="overflow:auto;max-height:55vh"><table style="width:100%;border-collapse:collapse;font-size:0.8em">` +
+    `<thead><tr>` +
+    `<th style="text-align:right;padding:4px;border-bottom:1px solid var(--border)">#</th>` +
+    `<th style="text-align:left;padding:4px;border-bottom:1px solid var(--border)">Right</th>` +
+    `<th style="text-align:left;padding:4px;border-bottom:1px solid var(--border)">Owner</th>` +
+    `<th style="text-align:right;padding:4px;border-bottom:1px solid var(--border)">Year</th>` +
+    `<th style="text-align:right;padding:4px;border-bottom:1px solid var(--border)">POD↔POU km</th>` +
+    `<th style="text-align:left;padding:4px;border-bottom:1px solid var(--border)">Off corridor</th>` +
+    `<th style="text-align:left;padding:4px;border-bottom:1px solid var(--border)"></th>` +
+    `</tr></thead><tbody id="moved-farther-tbody">`
+
+  const renderRows = (list: typeof rows) => {
+    const max = 200
+    let body = ''
+    for (let i = 0; i < Math.min(list.length, max); i++) {
+      const r = list[i]
+      const rank = rows.indexOf(r) + 1
+      body += `<tr>` +
+        `<td style="padding:4px;border-bottom:1px solid var(--border);text-align:right;color:var(--text-muted)">${rank}</td>` +
+        `<td style="padding:4px;border-bottom:1px solid var(--border)"><code>${r.wr}</code></td>` +
+        `<td style="padding:4px;border-bottom:1px solid var(--border)">${r.owner || '—'}</td>` +
+        `<td style="padding:4px;border-bottom:1px solid var(--border);text-align:right">${r.year ?? '—'}</td>` +
+        `<td style="padding:4px;border-bottom:1px solid var(--border);text-align:right">${r.podPouKm.toFixed(1)}</td>` +
+        `<td style="padding:4px;border-bottom:1px solid var(--border)">${
+          r.offCorridor
+            ? `<span class="badge badge-newground" title="POU ${r.corridorKm?.toFixed(1) ?? '?'} km from corridor">yes · ${r.corridorKm?.toFixed(1) ?? '?'} km</span>`
+            : '—'
+        }</td>` +
+        `<td style="padding:4px;border-bottom:1px solid var(--border)">` +
+        `<button type="button" class="zoom-btn" data-zoom-wr="${r.wr}">Zoom</button></td>` +
+        `</tr>`
+    }
+    if (!list.length) {
+      body = `<tr><td colspan="7" style="padding:12px;color:var(--text-muted)">No rights match that owner filter.</td></tr>`
+    }
+    return { body, truncated: list.length > max }
   }
-  if (entries.length > 25) html += `<div style="font-size:0.75em;color:var(--text-muted)">Top 25 of ${entries.length} shown (by distance). Click purple stars on the map for the rest.</div>`
-  html += `${FOOT}Distance is from the POD to the right's first POU polygon, adjusted for the polygon's size (so a POD inside a large district service area is not flagged). ` +
-    `"New ground" is a geometric proxy — the place of use sits outside the river's natural corridor (NHD channel + NWI riparian) — not a land-use history finding. Neutral data pattern only.</div>`
-  open(html)
+
+  const initial = renderRows(rows)
+  html += initial.body
+  html += `</tbody></table></div>`
+  html += `<p id="moved-farther-truncate-note" style="font-size:0.8em;color:var(--text-muted)">${
+    initial.truncated ? `Showing top 200 of ${rows.length}. CSV includes all.` : ''
+  }</p>`
+  html += `<p style="font-size:0.75em;color:var(--text-muted);margin-top:8px">` +
+    `IDWR serves current POU geometry only. Original (pre-change) places of use need IDWR transfer records (linked from each right’s report). ` +
+    `Threshold: &gt;${TRANSFER_DIST_KM} km POD↔POU; off-corridor &gt;${NEW_GROUND_KM} km.</p>`
+
+  openModal(html)
+
+  document.getElementById('moved-farther-csv')?.addEventListener('click', () => {
+    const q = (document.getElementById('moved-farther-owner-filter') as HTMLInputElement | null)?.value.trim().toLowerCase() || ''
+    const exportRows = q ? rows.filter(r => r.owner.toLowerCase().includes(q)) : rows
+    downloadCsv('basin34-water-moved-farther.csv', movedFartherToCsv(exportRows))
+  })
+
+  const input = document.getElementById('moved-farther-owner-filter') as HTMLInputElement | null
+  const tbody = document.getElementById('moved-farther-tbody')
+  const status = document.getElementById('moved-farther-filter-status')
+  const note = document.getElementById('moved-farther-truncate-note')
+  input?.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase()
+    const filtered = q ? rows.filter(r => r.owner.toLowerCase().includes(q)) : rows
+    const rendered = renderRows(filtered)
+    if (tbody) tbody.innerHTML = rendered.body
+    if (status) {
+      status.textContent = q
+        ? `${filtered.length} right${filtered.length === 1 ? '' : 's'} matching “${input.value.trim()}”`
+        : ''
+    }
+    if (note) {
+      note.textContent = rendered.truncated ? `Showing top 200 of ${filtered.length}. CSV follows the filter.` : ''
+    }
+  })
 }
 
 /** All rights delivered through one named diversion (canal/ditch system). */
@@ -765,7 +876,7 @@ function priorityBadge(year: number): string {
 }
 
 function transferBadge(distKm: number): string {
-  return ` <span class="badge badge-transfer">POD ${distKm.toFixed(1)} km from POU — potential transfer</span>`
+  return ` <span class="badge badge-transfer">POD ${distKm.toFixed(1)} km from POU — moved farther</span>`
 }
 
 /** Ranked table + CSV for downstream seniors on a dry-reach proxy. */

@@ -21,7 +21,8 @@ export interface StoryStep {
 
 /**
  * Geography-only guided story. No private surnames.
- * Order: overview → then/now → river shrink → dry-reach seniors → GW boom → transfers → Arco.
+ * Three receipts: dry channel → seniors CSV → water moved farther CSV.
+ * Order: overview → then/now → river shrink → dry-reach → moved farther.
  */
 export const STORY_STEPS: StoryStep[] = [
   {
@@ -42,7 +43,7 @@ export const STORY_STEPS: StoryStep[] = [
     kicker: 'Step 2 · Channel',
     title: 'Then the river reached the sinks. Now it often stops near Moore.',
     body:
-      'Switch the channel to “Now”: below the Moore diversion the mainstem is dashed brown. USGS records and district accounting show surface flow commonly ending long before Arco or the historic sinks near Howe.',
+      'Switch the channel to “Now”: below the Moore diversion the mainstem is dashed brown. USGS records and district accounting show surface flow commonly ending long before Arco or the historic sinks near Howe. Tap a gage for current CFS when the site still reports.',
     view: { lat: 43.72, lon: -113.28, zoom: 10 },
     flowEra: 'recent',
     highlightMode: 'none',
@@ -68,7 +69,7 @@ export const STORY_STEPS: StoryStep[] = [
     kicker: 'Step 4 · Senior rights',
     title: 'Downstream seniors on a dry reach',
     body:
-      'Pre-1950 surface rights on the corridor at or below Moore sit where the channel often goes dry. The ranked table (and CSV) is a public-data proxy — not a legal finding. Zoom any row to its point of diversion.',
+      'Pre-1950 surface rights on the corridor at or below Moore sit where the channel often goes dry — including the lower river near Arco. The ranked table (and CSV) is a public-data proxy — not a legal finding. Zoom any row to its point of diversion. Groundwater expansion vs seniors lives in Explore.',
     view: { lat: 43.65, lon: -113.30, zoom: 11 },
     flowEra: 'recent',
     highlightMode: 'senior-downstream',
@@ -77,41 +78,15 @@ export const STORY_STEPS: StoryStep[] = [
     showWells: false,
   },
   {
-    id: 'gw-boom',
-    kicker: 'Step 5 · Groundwater',
-    title: 'Groundwater expansion vs senior surface',
-    body:
-      'Later groundwater development shows up as wells and groundwater points of diversion. Compare that pattern with senior surface rights still mapped on the lower corridor.',
-    view: { lat: 43.80, lon: -113.40, zoom: 9 },
-    flowEra: 'recent',
-    highlightMode: 'conjunctive',
-    panel: 'conjunctive',
-    showPods: true,
-    showWells: true,
-  },
-  {
     id: 'transfers',
-    kicker: 'Step 6 · Place of use',
-    title: 'PODs far from their place of use',
+    kicker: 'Step 5 · Moved farther',
+    title: 'Water moved farther from the river corridor',
     body:
-      'Some rights show a point of diversion far from the irrigated polygon — a geometric “potential transfer” signal from IDWR POD/POU layers, not proof of an unauthorized move.',
+      'Some rights divert far from their authorized place of use; orange fills mark POUs off the natural corridor. That is a geometric proxy from IDWR layers — not a transfer filing, not a liner inventory, and not a count of canals built in the last decade. On satellite, look for lined canals carrying water east or west of the river onto newer ground. Open the table + CSV for the ranked list.',
     view: { lat: 43.85, lon: -113.45, zoom: 9 },
     flowEra: 'historical',
     highlightMode: 'transfers',
     panel: 'transfers',
-    showPods: true,
-    showWells: false,
-  },
-  {
-    id: 'arco',
-    kicker: 'Step 7 · Lower river',
-    title: 'Focus: lower river near Arco',
-    body:
-      'Zoom to the Arco gage area. Senior surface emphasis + the modern dry channel make the lower-basin pattern readable in one view. Use Explore for filters, or Share view to send this map.',
-    view: { lat: 43.635, lon: -113.30, zoom: 11 },
-    flowEra: 'recent',
-    highlightMode: 'senior-downstream',
-    panel: null,
     showPods: true,
     showWells: false,
   },
@@ -129,6 +104,8 @@ export interface StoryCallbacks {
   showConjunctive: () => void
   /** Persist story step in the URL hash. */
   onStepChange?: (index: number) => void
+  /** Ensure NHD canals are visible (moved-farther step). */
+  ensureCanalsVisible?: () => void
 }
 
 let currentIndex = 0
@@ -145,7 +122,7 @@ export function setStoryStepIndex(i: number) {
 const PANEL_BTN_LABEL: Record<string, string> = {
   'river-shrink': 'Open Mackay → Moore → Arco chart',
   'dry-reach': 'Open seniors table + CSV',
-  transfers: 'Open transfers overview',
+  transfers: 'Open moved-farther table + CSV',
   conjunctive: 'Open GW vs seniors overview',
 }
 
@@ -214,6 +191,10 @@ export function goToStoryStep(index: number, options: { openPanel?: boolean } = 
   const showWells = !!step.showWells
   cbs.setPodsEnabled(showPods)
   cbs.setWellsEnabled(showWells)
+
+  if (step.highlightMode === 'transfers') {
+    cbs.ensureCanalsVisible?.()
+  }
 
   syncSidebarToState()
   cbs.refreshData()

@@ -11,8 +11,8 @@ const fillSwatch = (stroke: string, fill: string) =>
 const MODE_LEGEND: Record<string, string> = {
   'senior-downstream': `${star(EMPHASIS_COLORS.senior.stroke)} Pre-1950 rights at/below the focus reach (emphasized). Others dimmed.`,
   'junior-dev': `${star(EMPHASIS_COLORS.junior.stroke)} Post-1980 rights/wells above the rate threshold (orange). Others dimmed.`,
-  transfers: `${star(EMPHASIS_COLORS.transfer.stroke)} Rights whose POD sits far (&gt;8 km) from their place of use; dashed lines connect POD ↔ POU. ` +
-    `${fillSwatch('#c2410c', 'rgba(249,115,22,0.45)')} solid orange POU = "new ground" — moved outside the river's natural corridor. Others dimmed.`,
+  transfers: `${star(EMPHASIS_COLORS.transfer.stroke)} Water moved farther: POD sits far (&gt;8 km) from place of use; dashed lines connect POD ↔ POU. ` +
+    `${fillSwatch('#c2410c', 'rgba(249,115,22,0.45)')} solid orange POU = off the natural corridor (geometric — not “built since 2010”). Others dimmed.`,
   conflict: `${star(EMPHASIS_COLORS['conflict-senior'].stroke)} senior (pre-1970) on river corridor, downstream &nbsp; ${star(EMPHASIS_COLORS['conflict-junior'].stroke)} newer (post-1980) on corridor, upstream. Mountain springs/tributaries off the channel are excluded. Others dimmed.`,
   conjunctive: `${star(EMPHASIS_COLORS['conjunctive-gw'].stroke)} post-1950 groundwater rights &amp; irrigation wells &nbsp; ${star(EMPHASIS_COLORS.senior.stroke)} senior (pre-1950) surface rights downstream. Others dimmed.`,
   'high-rate': `${star(EMPHASIS_COLORS['high-rate'].stroke)} Rights above the rate threshold (red). Others dimmed.`,
@@ -66,7 +66,7 @@ export function updateLegend(counts: LegendCounts, layersOn: { pods: boolean; we
   }
   if (state.placeOfUseMode) {
     rows.push(
-      `<div class="lg-row">${swatch('#15803d', true)} place of use &nbsp; ${swatch('#f97316', true)} POU of potential transfer &nbsp; ${swatch('#0f766e', true)} district service area (outline only) &nbsp; ${swatch('#a855f7')} selected</div>`,
+      `<div class="lg-row">${swatch('#15803d', true)} place of use &nbsp; ${swatch('#f97316', true)} POU of moved-farther right &nbsp; ${swatch('#0f766e', true)} district service area (outline only) &nbsp; ${swatch('#a855f7')} selected</div>`,
     )
   }
   rows.push(
@@ -87,7 +87,7 @@ export const MODE_HINTS: Record<string, string> = {
   none: 'Pick a view to emphasize an investigative pattern. Non-matching points are dimmed, never hidden.',
   'senior-downstream': 'Shows where the oldest (pre-1950) rights divert at/below the focus reach — the rights most exposed to upstream depletion.',
   'junior-dev': 'Shows large post-1980 rights and wells — where significant new development occurred after senior rights were established.',
-  transfers: 'Flags rights whose point of diversion is more than 8 km from their authorized place of use — candidates for transfer/POU-change review. Solid orange fills mark places of use more than 1.5 km outside the river\'s natural corridor (NHD channel + NWI riparian) — water moved onto previously dry ground.',
+  transfers: 'Geometric proxy: POD more than 8 km from current POU. Orange fills = POU more than 1.5 km outside the NHD+NWI corridor — not a lined-canal inventory or proof of recent breakout. Use satellite to look for lined canals east/west of the river. Opens ranked table + CSV.',
   conflict: 'Contrasts senior (pre-1970) downstream rights with newer (post-1980) upstream development — but only for PODs within 3 km of the NHD mainstem / NWI riparian corridor (valley-floor river path). Opens a ranked overview panel.',
   conjunctive: 'Contrasts the post-1950 groundwater development (rights + irrigation wells) with the senior surface rights downstream that depend on the same connected water — the core conjunctive-management pattern. Opens a chart pairing GW growth with measured flow at Arco.',
   'high-rate': 'Emphasizes rights above the cfs threshold regardless of age.',

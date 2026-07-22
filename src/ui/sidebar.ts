@@ -20,6 +20,10 @@ export interface SidebarCallbacks {
   showRiverShrink?: () => void
   /** Dry-reach seniors ranked table + CSV. */
   showDryReach?: () => void
+  /** Water moved farther ranked table + CSV. */
+  showMovedFarther?: () => void
+  /** Conjunctive / GW boom panel. */
+  showConjunctive?: () => void
   /** Permalink / persistence hook when UI mode changes. */
   onUiMode?: (mode: UiMode) => void
   /** Mobile bottom-sheet expanded/collapsed (map should invalidateSize). */
@@ -206,6 +210,7 @@ export function wireSidebar(cb: SidebarCallbacks) {
       }
       if (preset === 'transfers') {
         setHighlightMode('transfers', cb)
+        cb.showMovedFarther?.()
         return
       }
       if (preset === 'then-now') {
@@ -215,12 +220,11 @@ export function wireSidebar(cb: SidebarCallbacks) {
         return
       }
       if (preset === 'arco') {
-        // Lower basin focus near Arco gage (USGS 13132500)
+        // Legacy preset — lower basin focus near Arco gage
         state.flowEra = 'recent'
         syncEraButtons()
         cb.setFlowEra('recent')
         setHighlightMode('senior-downstream', cb)
-        // Map zoom is applied via callback if provided
         cb.focusArco?.()
         return
       }
@@ -264,6 +268,14 @@ export function wireSidebar(cb: SidebarCallbacks) {
   $('appropriation-btn')?.addEventListener('click', () => cb.showAppropriation?.())
   $('river-shrink-btn')?.addEventListener('click', () => cb.showRiverShrink?.())
   $('dry-reach-btn')?.addEventListener('click', () => cb.showDryReach?.())
+  $('moved-farther-btn')?.addEventListener('click', () => {
+    setHighlightMode('transfers', cb)
+    cb.showMovedFarther?.()
+  })
+  $('conjunctive-btn')?.addEventListener('click', () => {
+    setHighlightMode('conjunctive', cb)
+    cb.showConjunctive?.()
+  })
 
   // POD filters
   $<HTMLSelectElement>('pod-color-mode')?.addEventListener('change', e => {
@@ -328,7 +340,7 @@ export function wireSidebar(cb: SidebarCallbacks) {
     alert(
       'Basin 34 Water Transparency\n\n' +
       'Core move: tap a ★ POD (point of diversion). Purple dashed lines connect that takeout to its place-of-use fields, and the side panel shows the water right.\n\n' +
-      'Explore is the default map. Story walks the dry-river narrative. Owner search, dry-reach CSV, and analysis lenses are there when you need them.\n\n' +
+      'Explore is the default map. Story walks three receipts: dry channel, downstream seniors (CSV), and water moved farther (CSV). Advanced tools stay nested.\n\n' +
       'This is a community transparency tool, not legal advice. For rights, administration, or legal matters, use official IDWR and Water District 34 resources.\n\n' +
       'Share view copies a permalink to the current map.',
     )
