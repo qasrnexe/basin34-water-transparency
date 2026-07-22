@@ -31,7 +31,7 @@ export function renderShell() {
             <p class="story-body" id="story-body">
               Water District 34 covers the Big Lost River. This viewer uses public IDWR and USGS data so anyone can see how priority, place, and measured flow fit together — especially on the lower river near Arco.
             </p>
-            <p class="story-perf-hint">Early steps show the river &amp; gages only — rights appear when the story needs them, so phones stay usable.</p>
+            <p class="story-perf-hint">Tap a ★ on the map anytime — purple lines show where that right diverts and where it can be used.</p>
             <div class="story-nav">
               <button type="button" id="story-prev" class="story-nav-btn" disabled>← Back</button>
               <span id="story-step-counter" class="story-step-counter">1 / 7</span>
@@ -91,7 +91,10 @@ export function renderShell() {
           <select id="reach-select" class="text-xs w-full mb-1 border border-[var(--border)] rounded px-1 py-0.5">
             <option value="">— Whole basin —</option>
           </select>
-          <label class="block text-xs"><input type="checkbox" id="place-of-use-mode" checked> Show Place of Use polygons</label>
+          <label class="block text-xs"><input type="checkbox" id="place-of-use-mode" checked> Show all Place of Use fills</label>
+          <div class="text-[10px] text-[var(--text-muted)] leading-tight mt-0.5">
+            Click a POD ★ anytime for purple field outlines + dashed diversion lines (works even if this is off).
+          </div>
           <div class="text-[10px] text-[var(--text-muted)] leading-tight mt-0.5">
             Click a field (POU), POD ★, or gage for details. Esc or map background clears selection.
           </div>
@@ -182,6 +185,10 @@ export function renderShell() {
 
       <div id="map-wrap">
         <div id="map"></div>
+        <div id="map-hint" class="map-hint">
+          <strong>Start here:</strong> zoom in, then tap a ★ water-right point.
+          Purple lines connect that diversion to its fields.
+        </div>
         <div id="selection-banner" class="hidden">
           <span id="selection-text"></span>
           <button id="selection-clear" title="Clear selection (Esc)">✕ clear</button>

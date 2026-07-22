@@ -36,11 +36,13 @@ function input(id: string): HTMLInputElement | null {
   return $<HTMLInputElement>(id)
 }
 
-const MODE_KEY = 'basin34-ui-mode'
+const MODE_KEY = 'basin34-ui-mode-v2'
 
 export function getStoredUiMode(): UiMode {
   const v = localStorage.getItem(MODE_KEY)
-  return v === 'explore' ? 'explore' : 'story'
+  // Default Explore — the POD click → purple field lines workflow is the core map.
+  if (v === 'story') return 'story'
+  return 'explore'
 }
 
 export function applyUiMode(mode: UiMode) {
@@ -325,13 +327,10 @@ export function wireSidebar(cb: SidebarCallbacks) {
   $('info-btn')?.addEventListener('click', () => {
     alert(
       'Basin 34 Water Transparency\n\n' +
-      'A public map of Water District 34 / Big Lost River Basin using IDWR and USGS data.\n\n' +
-      'Purpose: help anyone see how water rights, wells, places of use, and measured streamflow ' +
-      'fit together — including on the lower river near Arco, where the channel often goes dry ' +
-      'while senior paper rights remain.\n\n' +
-      'This is a community transparency tool, not legal advice. For rights, administration, or ' +
-      'legal matters, use official IDWR and Water District 34 resources.\n\n' +
-      'Use Story mode for a guided start; Explore for full filters and layers. Share view copies a permalink.',
+      'Core move: tap a ★ POD (point of diversion). Purple dashed lines connect that takeout to its place-of-use fields, and the side panel shows the water right.\n\n' +
+      'Explore is the default map. Story walks the dry-river narrative. Owner search, dry-reach CSV, and analysis lenses are there when you need them.\n\n' +
+      'This is a community transparency tool, not legal advice. For rights, administration, or legal matters, use official IDWR and Water District 34 resources.\n\n' +
+      'Share view copies a permalink to the current map.',
     )
   })
 

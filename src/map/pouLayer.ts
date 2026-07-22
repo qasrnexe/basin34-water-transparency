@@ -91,15 +91,16 @@ export class PouLayer {
     this.base?.setStyle(f => this.styleFor(f as GeoFeature))
     this.overlay.clearLayers()
     this.lines.clearLayers()
-    if (!state.placeOfUseMode) return
+    if (state.selectedWRs.size === 0 && state.highlightMode !== 'transfers') return
 
-    // Outline the selected POU polygons above everything else
+    // Purple POD↔field graphics always work when a right is selected — even if
+    // "show all Place of Use" is off (that toggle only controls the dense fill layer).
     for (const wr of state.selectedWRs) {
       for (const pou of this.store.pousByWR.get(wr) || []) {
         this.overlay.addLayer(L.geoJSON(pou.feature as any, {
           pane: 'pouSelectedPane',
           interactive: false,
-          style: () => ({ color: '#a855f7', weight: 3, fillOpacity: 0, dashArray: undefined }),
+          style: () => ({ color: '#a855f7', weight: 3, fillOpacity: 0.08, fillColor: '#e9d5ff', dashArray: undefined }),
         }))
       }
     }
@@ -119,9 +120,9 @@ export class PouLayer {
           pane: 'pouLinePane',
           interactive: false, // decoration only — must not steal clicks from markers below
           color: '#a855f7',
-          weight: isSelected ? 2 : 1.5,
+          weight: isSelected ? 2.5 : 1.5,
           dashArray: '4,3',
-          opacity: isSelected ? 0.85 : 0.55,
+          opacity: isSelected ? 0.9 : 0.55,
         }))
       }
     }

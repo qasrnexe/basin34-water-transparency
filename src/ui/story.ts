@@ -26,15 +26,15 @@ export interface StoryStep {
 export const STORY_STEPS: StoryStep[] = [
   {
     id: 'overview',
-    kicker: 'Step 1 · Basin',
-    title: 'A river that runs dry — and rights that remain',
+    kicker: 'Step 1 · Click a right',
+    title: 'Every ★ is a point of diversion',
     body:
-      'Water District 34 covers the Big Lost River. This viewer uses public IDWR and USGS data so anyone can see how priority, place, and measured flow fit together — especially on the lower river near Arco.',
-    view: { lat: 43.85, lon: -113.45, zoom: 9 },
-    flowEra: 'historical',
+      'Zoom in and tap a star. The details panel opens that water right, and purple dashed lines connect the diversion to its place-of-use fields. That link — where water is taken vs where it is used — is the heart of this map.',
+    view: { lat: 43.70, lon: -113.32, zoom: 11 },
+    flowEra: 'recent',
     highlightMode: 'none',
     panel: null,
-    showPods: false,
+    showPods: true,
     showWells: false,
   },
   {
@@ -47,7 +47,7 @@ export const STORY_STEPS: StoryStep[] = [
     flowEra: 'recent',
     highlightMode: 'none',
     panel: null,
-    showPods: false,
+    showPods: true,
     showWells: false,
   },
   {

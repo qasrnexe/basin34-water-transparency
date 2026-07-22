@@ -16,7 +16,7 @@ import { PouLayer } from './map/pouLayer'
 import { DiversionLayer } from './map/diversionLayer'
 import { loadStaticLayers, type StaticLayers } from './map/staticLayers'
 import { renderShell } from './ui/shell'
-import { wireSidebar, populateReachSelect, syncSidebarToState, syncReachSelect, loadDataAsOf } from './ui/sidebar'
+import { wireSidebar, populateReachSelect, syncSidebarToState, syncReachSelect, loadDataAsOf, getStoredUiMode } from './ui/sidebar'
 import { updateLegend } from './ui/legend'
 import { setupTimeline, type TimelineControl } from './ui/timeline'
 import { setupOwnerSearch, clearOwnerSearchUI } from './ui/ownerSearch'
@@ -109,16 +109,19 @@ function updateLegendNow() {
 function updateSelectionBanner() {
   const banner = document.getElementById('selection-banner')!
   const text = document.getElementById('selection-text')!
+  const hint = document.getElementById('map-hint')
   if (state.selectedWRs.size === 0) {
     banner.classList.add('hidden')
+    hint?.classList.remove('hidden')
     return
   }
+  hint?.classList.add('hidden')
   const wrs = [...state.selectedWRs]
   if (wrs.length === 1) {
     const owner = store.podsByWR.get(wrs[0])?.[0]?.owner
-    text.textContent = `Right ${wrs[0]}${owner ? ` — ${owner}` : ''}`
+    text.textContent = `Right ${wrs[0]}${owner ? ` — ${owner}` : ''} · purple = diversion ↔ fields`
   } else {
-    text.textContent = `${wrs.length} rights share this place of use`
+    text.textContent = `${wrs.length} rights share this place of use · purple links diversions to fields`
   }
   banner.classList.remove('hidden')
 }
@@ -178,12 +181,12 @@ async function bootstrap() {
   void loadDataAsOf()
   const lite = preferLiteMap()
   if (lite) {
-    // Phones: fewer polygons + hide dimmed markers. Story starts with channel/gages only.
+    // Phones: skip painting every POU fill (heavy). Selection purple lines still work.
     state.placeOfUseMode = false
     state.hideNonMatches = true
     document.body.classList.add('lite-map')
   } else {
-    // Desktop Story also hides non-matches so analysis steps stay snappy.
+    state.placeOfUseMode = true
     state.hideNonMatches = true
   }
   setLoadStatus(lite ? 'Phone-friendly load…' : 'Building map…', 8)
@@ -212,12 +215,9 @@ async function bootstrap() {
   pouLayer = new PouLayer(map, store, onPouClick)
   diversionLayer = new DiversionLayer(map, store, d => showDiversionDetails(d, store))
   diversionLayer.setEnabled(true)
-
-  // Story-first / phone: don't paint 7k POD markers or wells until a step needs them.
-  if (lite || restored.storyStep == null) {
-    podLayer.setEnabled(false)
-    wellLayer.setEnabled(false)
-  }
+  // Core map: POD stars on; wells stay off until Explore asks for them.
+  podLayer.setEnabled(true)
+  wellLayer.setEnabled(false)
 
   staticLayers = await loadStaticLayers(map, store.reaches, {
     onFeatureClick: (feature, group) =>
@@ -279,7 +279,6 @@ async function bootstrap() {
       state.hideNonMatches = lite || mode === 'story'
       if (mode === 'explore') {
         void staticLayers.loadHeavy()
-        // Explore on phone still keeps hideNonMatches; turn PODs on if Story had them off.
         if (!podLayer.enabled) {
           podLayer.setEnabled(true)
           syncLayerCheckbox('layer-pods', true)
@@ -308,6 +307,9 @@ async function bootstrap() {
       resetState()
       if (lite) {
         state.placeOfUseMode = false
+        state.hideNonMatches = true
+      } else {
+        state.placeOfUseMode = true
         state.hideNonMatches = true
       }
       syncSidebarToState()
@@ -393,24 +395,30 @@ async function bootstrap() {
 
   map.on('moveend', updatePermalink)
 
-  // First paint: channel + gages (and no 7k stars yet on Story/phone).
+  // First paint with POD stars available — purple field lines appear after POU loads.
   refreshData()
-  setLoadStatus(lite ? 'Map ready — Story stays light on purpose' : 'Map ready — loading fields in background…', 70)
+  setLoadStatus(lite ? 'Map ready — tap a ★ for purple field lines' : 'Map ready — loading fields in background…', 70)
   hideLoadOverlay()
   requestAnimationFrame(() => map.invalidateSize())
 
-  // Align map layers with the current Story step (pods off until an analysis step).
-  // Never auto-open panels on cold load — that traps phones behind a modal.
-  goToStoryStep(restored.storyStep ?? 0, { openPanel: false })
+  // Story only when the user is in Story mode (or a shared story step link).
+  const startInStory = getStoredUiMode() === 'story' || restored.storyStep != null
+  if (startInStory) {
+    goToStoryStep(restored.storyStep ?? 0, { openPanel: false })
+  } else if (!restored.view) {
+    // Bird's-eye default: lower basin where the dry-reach story is legible.
+    map.setView([43.70, -113.32], 10)
+  }
 
-  // Stage 3: enrich POU in background; only paint polygons if the user asked.
+  // Stage 3: enrich POU in background; selection purple lines light up when ready.
   // Skip auto canals/NWI on phone — Explore / layer toggles pull them in.
   void (async () => {
     try {
       await enrichDataStoreWithPou(store, label => setLoadStatus(label, 85))
       if (state.placeOfUseMode) pouLayer.setVisibleWRs(podLayer.visibleWRs())
+      else pouLayer.refreshSelection()
       if (!lite) await staticLayers.loadHeavy()
-      setLoadStatus('Background data ready', 100)
+      setLoadStatus('Background data ready — click a ★ for purple links', 100)
     } catch (err) {
       console.error('Background layer load failed', err)
       setLoadStatus('Some layers failed to load', 100)
